@@ -17,40 +17,45 @@
 using namespace std;
 using namespace blockqueue;
 
-BlockQueue::BlockQueue(size_t capacity) : m_capacity(capacity) {}
+template <class DataT>
+BlockQueue<DataT>::BlockQueue(size_t capacity) : m_capacity(capacity) {}
 
-BlockQueue::BlockQueue(const BlockQueue& orig) {
+template <class DataT>
+BlockQueue<DataT>::BlockQueue(const BlockQueue& orig) {
 }
 
-BlockQueue::~BlockQueue() {
+template <class DataT>
+BlockQueue<DataT>::~BlockQueue() {
     clearAndFreeElements();
 }
 
-void BlockQueue::put(CarData* carData) {
+template <class DataT>
+void BlockQueue<DataT>::put(DataT data) {
     
     unique_lock<mutex> lk(m_mutex);
     while (isFull()) {
-        cout << "queue is full, put is blocking." << endl;
+        cout << "BlockQueue::queue is full, put is blocking." << endl;
         m_notFull.wait(lk);
     }
-    m_queue.push_back(carData);
+    m_queue.push_back(data);
     m_notEmpty.notify_one();
 }
-
-CarData* BlockQueue::take() {
+template <class DataT>
+DataT BlockQueue<DataT>::take() {
     unique_lock<mutex> lk(m_mutex);
     while(isEmpty()) {
-        cout << "queue is empty, take is blocking." << endl;
+        cout << "BlockQueue::queue is empty, take is blocking." << endl;
         m_notEmpty.wait(lk);        
     }
-    CarData* carData = m_queue.front();
+    DataT* data = m_queue.front();
     m_queue.pop_front();
     m_notFull.notify_one();    
-    return carData;
+    return data;
 }
-
-void BlockQueue::clearAndFreeElements(void) {
-    for(std::list<CarData*>::iterator iter = m_queue.begin(); iter != m_queue.end();){
+template <class DataT>
+void BlockQueue<DataT>::clearAndFreeElements(void) {
+    
+    for(typename list<DataT>::iterator iter = m_queue.begin(); iter != m_queue.end();){
         delete *iter;
         iter = m_queue.erase(iter);
     }

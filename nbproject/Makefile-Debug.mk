@@ -35,9 +35,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/src/BlockQueue.o \
-	${OBJECTDIR}/src/MotorInfoUpload.o \
-	${OBJECTDIR}/src/main.o
+	${OBJECTDIR}/src/CarData.o \
+	${OBJECTDIR}/src/DataGenerator.o \
+	${OBJECTDIR}/src/DataSender.o \
+	${OBJECTDIR}/src/MotorInfoUpload.o
 
 
 # C Compiler Flags
@@ -54,29 +55,34 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-LExternalDependencies/mysqlcpp/lib -LExternalDependencies/SafeStrCpy -L../ByteBuffer
+LDLIBSOPTIONS=-LExternalDependencies/mysqlcpp/lib -LExternalDependencies/SafeStrCpy -L../ByteBuffer -L../paho.mqtt.c/build/output
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
 	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motorinfoupload
 
 motorinfoupload: ${OBJECTFILES}
-	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -lmysqlcppconn-static -lpthread `mysql_config --cflags --libs` -std=c++0x -lsafestrcpy -lbytebuffer
+	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -lmysqlcppconn-static -lpthread `mysql_config --cflags --libs` -std=c++0x -lsafestrcpy -lbytebuffer -lpaho-mqtt3c -lpaho-mqtt3cs
 
-${OBJECTDIR}/src/BlockQueue.o: src/BlockQueue.cpp
+${OBJECTDIR}/src/CarData.o: src/CarData.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/BlockQueue.o src/BlockQueue.cpp
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/CarData.o src/CarData.cpp
+
+${OBJECTDIR}/src/DataGenerator.o: src/DataGenerator.cpp
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/DataGenerator.o src/DataGenerator.cpp
+
+${OBJECTDIR}/src/DataSender.o: src/DataSender.cpp
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/DataSender.o src/DataSender.cpp
 
 ${OBJECTDIR}/src/MotorInfoUpload.o: src/MotorInfoUpload.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/MotorInfoUpload.o src/MotorInfoUpload.cpp
-
-${OBJECTDIR}/src/main.o: src/main.cpp
-	${MKDIR} -p ${OBJECTDIR}/src
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/main.o src/main.cpp
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/MotorInfoUpload.o src/MotorInfoUpload.cpp
 
 # Subprojects
 .build-subprojects:
