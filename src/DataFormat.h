@@ -24,7 +24,7 @@
 #include "mysql_driver.h"
 #include "statement.h"
 #include "BlockQueue.h"
-
+#include <assert.h>
 #include <mutex>
 #include <condition_variable>
 #include <map>
@@ -35,6 +35,9 @@
 #define TIMEFORMAT "%Y-%m-%d %H:%M:%S"
 #define TIMEOUT 1
 #define OK 0
+
+#define TEST true
+
 
 class CarData;
 typedef std::map<std::string, CarData*> CarDataMap;

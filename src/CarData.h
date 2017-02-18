@@ -90,7 +90,7 @@ typedef struct CarSignalData {
     uint8_t A_typeCode;
     uint8_t A_highestAlarmLevel;
     uint32_t A_generalAlarmSigns;
-    
+
     // checkCode 应放在复制时计算
     // uint8_t checkCode;
 
@@ -125,7 +125,7 @@ class DataGenerator;
 
 class CarData {
 public:
-    
+
     CarData(const CarBaseInfo& carInfo, DataGenerator* motorInfoUpload);
     CarData(const std::string& vin, DataGenerator* motorInfoUpload);
 
@@ -136,37 +136,19 @@ public:
     DataPtrLen* createDataCopy();
     // data format expected like | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | ... |
     void updateStructByMQ(uint8_t* ptr, size_t length);
-    
-//    static void initForClass(sql::Statement* state, sql::PreparedStatement* prep_stmt, enumEncryptionAlgorithm encryptionAlgorithm);
     time_t getCollectTime();
     std::string getVin();
+    bool noneGetData() {return m_noneGetData;}
+    bool allGetData() {return m_allGetData;}
 private:
     std::string m_vin;
     time_t m_collectTime;
-    uint64_t m_carId;   // maybe 0
-    //CarBaseInfo m_carInfo;
-    // bytebuf::ByteBuffer* m_data;
     CarSigData_t m_data;
 
-//    static sql::Statement* m_state;
-//    static sql::PreparedStatement* m_prep_stmt;
-//    static enumEncryptionAlgorithm m_encryptionAlgorithm;
-    
-    
+    bool m_noneGetData; // 初始值 true，如果任何一次查询中得到数据，则置为 false
+    bool m_allGetData; // 初始值 true，如果任何一次查询中没得到数据，则置为 false
+
     class DataGenerator* m_dataGenerator;
-
-//    // 以信号码为键，装各个信号在数据单元中从整车数据起始的偏移量，得到偏移量，信号值就可以直接填入数据单元中
-//    static SignalMap m_signalMap;
-//    static SignalMap::iterator m_signalIterator;
-
-    void genRealtimeUploadData();
-//    void genCompletelyBuildedVehicleData(const uint64_t& carId, bytebuf::ByteBuffer* DataOut);
-//    void genDriveMotorData(const uint64_t& carId, bytebuf::ByteBuffer* DataOut);
-//    //void genEngineData(const uint64_t& carId, bytebuf::ByteBuffer* DataOut);
-//    void genLocationData(const uint64_t& carId, bytebuf::ByteBuffer* DataOut);
-//    void genExtremeValueData(const uint64_t& carId, bytebuf::ByteBuffer* DataOut);
-//    void geAlarmData(const uint64_t& carId, bytebuf::ByteBuffer* DataOut);
-//    void compressSignalDataWithLength(bytebuf::ByteBuffer* DataOut, const uint64_t& carId, const SignalInfo signalInfoArray[], const int& offset, const int& size);
     void getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
     void getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
     void getLocationFromDBAndUpdateStruct();

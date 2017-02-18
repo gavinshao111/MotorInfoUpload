@@ -33,8 +33,10 @@ void dataGeneratorTask(DataGenerator* dataGenerator);
 void dataSenderTask(DataSender* dataSender);
 void setupDBConnection(StaticResource& staticResource);
 void closeDBConnection(StaticResource& staticResource);
-
-
+#if TEST
+extern const string vinForTest = "0123456789abcdefg";
+extern const string StrlastUploadTimeForTest = "2017-02-17 11:23:03";
+#endif
 int main(int argc, char** argv) {
     StaticResource staticResource;
     try {
@@ -60,8 +62,8 @@ int main(int argc, char** argv) {
         staticResource.dataQueue = new BlockQueue<DataPtrLen*>(100);
         setupDBConnection(staticResource);
 
-#define TEST 0
-        if (TEST) {
+
+        if (false) {
             time_t time;
             char strCurrUploadTime[20];
             struct tm* currUploadTimeTM;

@@ -77,15 +77,29 @@ const static uint32_t sigArray_Big[] = {
     OPCODE_ICU_TOTAL_METER //累计里程4字节
 };
 
-CarData::CarData(const string& vin, DataGenerator* motorInfoUpload) : m_vin(vin), m_carId(0), m_dataGenerator(motorInfoUpload) {
+// 程序运行过程中新车机发送完整数据时调用此构造函数
+CarData::CarData(const string& vin, DataGenerator* motorInfoUpload) : m_vin(vin), m_dataGenerator(motorInfoUpload) {
     if (VINLEN != vin.length())
-        throw runtime_error("CarData(): vin illegal");
+        throw runtime_error("CarData(): illegal vin");
+//    m_noneGetData = true;
+//    m_allGetData = true;
+
     initFixedData();
 }
 
-CarData::CarData(const CarBaseInfo& carInfo, DataGenerator* motorInfoUpload) : m_vin(carInfo.vin), m_carId(carInfo.carId), m_dataGenerator(motorInfoUpload) {
+// 程序初始化从数据库读取数据时调用此构造函数
+CarData::CarData(const CarBaseInfo& carInfo, DataGenerator* motorInfoUpload) : m_vin(carInfo.vin), m_dataGenerator(motorInfoUpload) {
     if (VINLEN != carInfo.vin.length())
-        throw runtime_error("CarData(): vin illegal");
+        throw runtime_error("CarData(): illegal vin");
+    if (carInfo.carId < 1)
+        throw runtime_error("CarData(): Illegal carInfo.carId");
+    m_noneGetData = true;
+    m_allGetData = true;
+
+    m_dataGenerator->m_prepStmtForGps->setUInt64(1, carInfo.carId);
+    m_dataGenerator->m_prepStmtForSig->setUInt64(1, carInfo.carId);
+    m_dataGenerator->m_prepStmtForBigSig->setUInt64(1, carInfo.carId);
+    
     initFixedData();
 }
 
@@ -95,17 +109,22 @@ CarData::CarData(const CarData& orig) {
 CarData::~CarData() {
 }
 
-time_t CarData::getCollectTime() {return m_collectTime;}
-string CarData::getVin() {return m_vin;}
+time_t CarData::getCollectTime() {
+    return m_collectTime;
+}
+
+string CarData::getVin() {
+    return m_vin;
+}
 
 void CarData::initFixedData() {
     m_data.startCode[0] = '#';
     m_data.startCode[1] = '#';
     m_data.responseFlag = 0xfe;
-    m_vin.copy((char*)m_data.vin, sizeof(m_data.vin));
+    m_vin.copy((char*) m_data.vin, sizeof (m_data.vin));
     m_data.encryptionAlgorithm = m_dataGenerator->m_staticResource->EncryptionAlgorithm;
     m_data.dataUnitLength = sizeof (m_data) - offsetof(CarSignalData, year);
-    
+
     m_data.CBV_typeCode = 1;
     m_data.CBV_runningMode = 1;
     m_data.CBV_reverse = 0;
@@ -120,7 +139,6 @@ void CarData::initFixedData() {
     m_data.EV_minTemperatureSysCode = 1;
     m_data.A_typeCode = 7;
 }
-
 
 /*
  * not done
@@ -233,29 +251,27 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, uint8_t* sigVa
 }
 
 void CarData::createByDataFromDB(const bool& isReissue, const time_t& collectTime) {
-    updateCollectTime(collectTime);
-
-    m_data.CmdId = isReissue ? enumCmdCode::reissueUpload : enumCmdCode::realtimeUpload;
-
     // 2字节以内数据从 car_signal 表取，2字节以上数据从其他表取
 
     getSigFromDBAndUpdateStruct(sigArray_CBV);
-
     // 国标：停车充电过程中无需传输驱动电机数据
     if (PARKANDCHARGE != m_data.CBV_chargeStatus)
         getSigFromDBAndUpdateStruct(sigArray_DM);
-
     getLocationFromDBAndUpdateStruct();
     getSigFromDBAndUpdateStruct(sigArray_EV);
     getSigFromDBAndUpdateStruct(sigArray_Alarm);
 
     getBigSigFromDBAndUpdateStruct(sigArray_Big);
+
+    updateCollectTime(collectTime);
+
+    m_data.CmdId = isReissue ? enumCmdCode::reissueUpload : enumCmdCode::realtimeUpload;
 }
 
 DataPtrLen* CarData::createDataCopy() {
-   
+
     DataPtrLen* dataCpy = new DataPtrLen();
-    
+
     // 如果充电状态为停车充电，则只复制除驱动电机外的数据
     if (PARKANDCHARGE == m_data.CBV_chargeStatus) {
         //需除去驱动电机数据
@@ -263,20 +279,20 @@ DataPtrLen* CarData::createDataCopy() {
         dataCpy->m_length = sizeof (m_data) - DMLength + 1;
         dataCpy->m_ptr = new uint8_t[dataCpy->m_length];
         memset(dataCpy->m_ptr, 0, dataCpy->m_length);
-        
+
         m_data.dataUnitLength -= DMLength;
 
         size_t ofset_DM = offsetof(CarSignalData, DM_typeCode);
         size_t ofset_AfterDM = offsetof(CarSignalData, L_typeCode);
-        memcpy(dataCpy->m_ptr, (uint8_t*)&m_data, ofset_DM);
-        memcpy(dataCpy->m_ptr + ofset_DM, (uint8_t*)(&m_data + ofset_AfterDM), sizeof (m_data) - ofset_AfterDM);
+        memcpy(dataCpy->m_ptr, (uint8_t*) & m_data, ofset_DM);
+        memcpy(dataCpy->m_ptr + ofset_DM, (uint8_t*) (&m_data + ofset_AfterDM), sizeof (m_data) - ofset_AfterDM);
     } else {
         dataCpy->m_length = sizeof (m_data) + 1;
         dataCpy->m_ptr = new uint8_t[dataCpy->m_length];
         memset(dataCpy->m_ptr, 0, dataCpy->m_length);
-        memcpy(dataCpy->m_ptr, (uint8_t*)&m_data, sizeof (m_data));
+        memcpy(dataCpy->m_ptr, (uint8_t*) & m_data, sizeof (m_data));
     }
-    
+
     // put check code. 国标：采用BCC（异或校验）法，校验范围从命令单元的第一个字节开始，同后一字节异或，直到校验码前一字节为止，校验码占用一个字节
     uint8_t checkCode = *(dataCpy->m_ptr);
     size_t i = 1;
@@ -302,6 +318,7 @@ void CarData::updateCollectTime(const time_t& collectTime) {
 
 /*
  * 从 car_signal 表读取信号值，信号值长度为2字节
+ * 若没有数据返回false
  */
 void CarData::getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
     if (0 == sizeof (signalCodeArray))
@@ -311,14 +328,16 @@ void CarData::getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
 
     try {
         uint16_t sigVal;
-        m_dataGenerator->m_prepStmtForSig->setUInt64(1, m_carId);
+        
         for (int i = 0; i < sizeof (signalCodeArray); i++) {
             m_dataGenerator->m_prepStmtForSig->setUInt(2, signalCodeArray[i]);
             result = m_dataGenerator->m_prepStmtForSig->executeQuery();
             if (result->next()) {
                 sigVal = result->getInt("signal_value");
                 updateBySigTypeCode(signalCodeArray[i], (uint8_t*) & sigVal);
-            }
+                m_noneGetData = false;
+            } else
+                m_allGetData = false;
 
             if (NULL != result) {
                 delete result;
@@ -346,21 +365,23 @@ void CarData::getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
 
     try {
         uint32_t sigVal;
-        m_dataGenerator->m_prepStmtForBigSig->setUInt64(1, m_carId);
+        
         for (int i = 0; i < sizeof (signalCodeArray); i++) {
             m_dataGenerator->m_prepStmtForBigSig->setUInt(2, signalCodeArray[i]);
             result = m_dataGenerator->m_prepStmtForBigSig->executeQuery();
             if (result->next()) {
                 sigVal = result->getUInt("signal_value");
                 updateBySigTypeCode(signalCodeArray[i], (uint8_t*) & sigVal);
+                m_noneGetData = false;
             }
+            else
+                m_allGetData = false;
 
             if (NULL != result) {
                 delete result;
                 result = NULL;
             }
         }
-
     } catch (SQLException &e) {
         if (NULL != result) {
             delete result;
@@ -384,21 +405,21 @@ void CarData::getLocationFromDBAndUpdateStruct() {
 
     try {
         int latitude, longitude;
-        m_dataGenerator->m_prepStmtForGps->setUInt64(1, m_carId);
+        
         result = m_dataGenerator->m_prepStmtForGps->executeQuery();
         if (result->next()) {
             latitude = (int) result->getDouble("latitude") * 1000000;
             longitude = (int) result->getDouble("longitude") * 1000000;
             updateBySigTypeCode(latitudeSigTypeCode, (uint8_t*) & latitude);
             updateBySigTypeCode(longitudeSigTypeCode, (uint8_t*) & longitude);
-        }
+            m_noneGetData = false;
+        } else
+            m_allGetData = false;
 
         if (NULL != result) {
             delete result;
             result = NULL;
         }
-
-
     } catch (SQLException &e) {
         if (NULL != result) {
             delete result;
@@ -422,17 +443,17 @@ void CarData::updateStructByMQ(uint8_t* ptr, size_t length) {
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         sigValLen = *(ptr + i);
         i + 1;
-        
+
         if (i + 4 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         sigTypeCode = *(uint32_t*) (ptr + i);
         i += 4;
-        
+
         if (i + sigValLen > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         updateBySigTypeCode(sigTypeCode, ptr + i);
         i += sigValLen;
-        
+
         if (i + 8 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         collectTime = *(time_t*) (ptr + i);

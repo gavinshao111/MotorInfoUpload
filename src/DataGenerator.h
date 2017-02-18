@@ -51,7 +51,7 @@ private:
     sql::PreparedStatement* m_prepStmtForGps;
     
     // 数据采集时间,，当前需要上传的时间点
-    time_t m_currUploadTime;        
+    time_t m_currUploadTime;
     std::mutex m_mutex;
     
     void generateDataTaskA(void);
@@ -60,6 +60,7 @@ private:
     void createCarListDataFromDB(const bool& isReissue, const bool& send);
     void subscribeMq();
     void freePrepStatement();
+    void setTimeLimit(const time_t& to, const time_t& from = 0);
 };
 
 #endif /* MOTORINFOUPLOAD_H */
