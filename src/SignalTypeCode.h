@@ -306,6 +306,15 @@
 #define OPCODE_APS_RIGHTPDC2DETECTDIST    CAN_OPCODE(CAN3_DEVICE_APS,507)
 #define OPCODE_APS_RIGHTPDC2FAULTSTS CAN_OPCODE(CAN3_DEVICE_APS,508)
 
+// test
+#define DM_Status 1     //驱动电机状态
+#define L_Longitude 2  // test 经度
+#define L_Latitude 3   // test 纬度
+#define EV_MaxVoltageMonomerCode 4 //test 最高电压电池单体代号
+#define EV_MinVoltageMonomerCode 5 // test 最低电压电池单体代号
+#define EV_MaxTemperatureProbeCode 6 // test 最高温度探针序号
+#define EV_MinTemperatureProbeCode 7 // test 最低温度探针序号
+#define A_GeneralAlarmSigns 8 // test 通用报警标志
 
 #endif /* SIGNALTYPECODE_H */
 

@@ -5,7 +5,7 @@
  */
 
 /* 
- * File:   MotorInfoUpload.h
+ * File:   DataGenerator.h
  * Author: 10256
  *
  * Created on 2017年1月13日, 下午2:36
@@ -23,14 +23,13 @@
 #include "statement.h"
 #include "prepared_statement.h"
 #include <mutex>
+#include "DBConnection.h"
 
 extern "C" {
 #include "MQTTClient.h"
 }
 
-#define IllegalArgument 1
-
-class DataGenerator {
+class DataGenerator : public DBConnection {
 public:
     DataGenerator(StaticResource* staticResource);    
     virtual ~DataGenerator();
@@ -38,17 +37,20 @@ public:
      * start 2 threads, one generate data and put to queue, the other take data from queue then send to server.
      */
     void run(void);
-    static void getLastUploadInfo(StaticResource* staticResource, time_t& uploadTime);
+//    static void getLastUploadInfo(StaticResource* staticResource, time_t& uploadTime);
 
     friend class CarData;
     friend int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message);
     
 private:
-    StaticResource* m_staticResource;
+//    sql::Connection* DBConn;
+//    sql::Statement* DBState;
+//    StaticResource* m_staticResource;
     std::vector<CarBaseInfo> m_allCarArray;    //所有车机list
     sql::PreparedStatement* m_prepStmtForSig;
-    sql::PreparedStatement* m_prepStmtForBigSig;
+//    sql::PreparedStatement* m_prepStmtForBigSig;
     sql::PreparedStatement* m_prepStmtForGps;
+//    sql::PreparedStatement* m_prepStmtForDecimal;
     
     // 数据采集时间,，当前需要上传的时间点
     time_t m_currUploadTime;
@@ -61,6 +63,7 @@ private:
     void subscribeMq();
     void freePrepStatement();
     void setTimeLimit(const time_t& to, const time_t& from = 0);
+//    void closeDBConnection();
 };
 
 #endif /* MOTORINFOUPLOAD_H */

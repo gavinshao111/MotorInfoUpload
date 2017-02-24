@@ -37,7 +37,7 @@
 #define OK 0
 
 #define TEST true
-
+#define DEBUG true
 
 class CarData;
 typedef std::map<std::string, CarData*> CarDataMap;
@@ -100,8 +100,6 @@ typedef struct {
     enumEncryptionAlgorithm EncryptionAlgorithm;
 
     sql::Driver* DBDriver;
-    sql::Connection* DBConn;
-    sql::Statement* DBState;
 
     CarDataMap carDataMap;
     blockqueue::BlockQueue<DataPtrLen*>* dataQueue;

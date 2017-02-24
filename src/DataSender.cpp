@@ -17,6 +17,7 @@
 #include <exception.h>
 #include <warning.h>
 #include <string.h>
+#include <thread>
 
 using namespace std;
 using namespace sql;
@@ -26,20 +27,20 @@ using namespace blockqueue;
 
 const static string sqlTemplate = "update car_infokey set infovalue=(?) where infokey='gblastupload'";
 
-DataSender::DataSender(StaticResource* staticResource) : m_staticResource(staticResource) {
-    if (m_staticResource->PublicServerUserName.length() != sizeof(m_loginData.username)
-            || sizeof(m_loginData.password) != (m_staticResource->PublicServerPassword.length()))
-        throw runtime_error("PublicServerUserName or PublicServerPassword Illegal");
-    
-    m_staticResource->PublicServerUserName.copy((char*)m_loginData.username, sizeof(m_loginData.username));
-    m_staticResource->PublicServerPassword.copy((char*)m_loginData.password, sizeof(m_loginData.password));
+DataSender::DataSender(StaticResource* staticResource) : DBConnection(staticResource) {
+    if (m_staticResource->PublicServerUserName.length() != sizeof (m_loginData.username)
+            || sizeof (m_loginData.password) != (m_staticResource->PublicServerPassword.length()))
+        throw runtime_error("DataSender(): PublicServerUserName or PublicServerPassword Illegal");
+
+    m_staticResource->PublicServerUserName.copy((char*) m_loginData.username, sizeof (m_loginData.username));
+    m_staticResource->PublicServerPassword.copy((char*) m_loginData.password, sizeof (m_loginData.password));
     m_loginData.encryptionAlgorithm = m_staticResource->EncryptionAlgorithm;
     //m_loginData.serialNumber = 1;
     m_lastUploadTime = 0;
 }
 
-DataSender::DataSender(const DataSender& orig) {
-}
+//DataSender::DataSender(const DataSender& orig) {
+//}
 
 DataSender::~DataSender() {
 }
@@ -49,14 +50,15 @@ void DataSender::run() {
         cout << "DataQueue is NULL" << endl;
         return;
     }
-    if (NULL == m_staticResource->DBConn
-            || m_staticResource->DBConn->isClosed()
-            || NULL == m_staticResource->DBState) {
+
+    if (NULL == m_DBConn
+            || m_DBConn->isClosed()
+            || NULL == m_DBState) {
         cout << "DB hasn't setup" << endl;
         return;
     }
-
-    sendDataTask();
+    
+    //sendDataTask();
 }
 
 /* 
@@ -71,7 +73,7 @@ void DataSender::run() {
  */
 void DataSender::sendDataTask() {
     try {
-        DataGenerator::getLastUploadInfo(m_staticResource, m_lastUploadTime);
+        getLastUploadInfo(m_lastUploadTime);
 
         time_t now;
         struct tm* nowTM;
@@ -119,7 +121,7 @@ void DataSender::sendDataTask() {
 
 void DataSender::login() {
     for (uint8_t i = 0;; i++) {
-        sendData((uint8_t*)&m_loginData, sizeof(m_loginData));
+        sendData((uint8_t*) & m_loginData, sizeof (m_loginData));
         uint8_t rt = readResponse(m_staticResource->LoginTimeout);
         if (OK == rt)
             break;
@@ -135,7 +137,7 @@ void DataSender::login() {
 }
 
 void DataSender::logout() {
-    sendData((uint8_t*)&m_logoutData, sizeof(m_logoutData));
+    sendData((uint8_t*) & m_logoutData, sizeof (m_logoutData));
 }
 
 void DataSender::updateLoginTime(struct tm* nowTM) {
@@ -184,19 +186,19 @@ void DataSender::updateLastUploadTimeIntoDB(void) {
         memset(strCurrUploadTime, 0, sizeof (strCurrUploadTime));
         strftime(strCurrUploadTime, 19, TIMEFORMAT, currUploadTimeTM);
 
-        prepStmt = m_staticResource->DBConn->prepareStatement(sqlTemplate);
+        prepStmt = m_DBConn->prepareStatement(sqlTemplate);
         prepStmt->setString(1, strCurrUploadTime);
         // expect only 1 row affected.
-        if (1 != prepStmt->executeUpdate())
-            throw runtime_error("updateLastUploadTimeIntoDB(): update fail");
+        assert(1 != prepStmt->executeUpdate());
         delete prepStmt;
     } catch (SQLException &e) {
         if (NULL != prepStmt) {
             delete prepStmt;
             prepStmt = NULL;
         }
-        throw e;
+        throw;
     }
 }
 
-void DataSender::sendData(uint8_t* addr, size_t length) {}
+void DataSender::sendData(uint8_t* addr, size_t length) {
+}

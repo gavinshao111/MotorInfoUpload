@@ -69,7 +69,10 @@ typedef struct CarSignalData {
 
     // Location
     uint8_t L_typeCode;
-    uint8_t L_data[9];
+    
+    uint8_t L_status;
+    uint32_t L_longitudeAbs;
+    uint32_t L_latitudeAbs;
 
     // Extreme Value
     uint8_t EV_typeCode;
@@ -135,7 +138,7 @@ public:
     void createByDataFromDB(const bool& isReissue, const time_t& collectTime);
     DataPtrLen* createDataCopy();
     // data format expected like | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | ... |
-    void updateStructByMQ(uint8_t* ptr, size_t length);
+    void updateStructByMQ(int8_t* ptr, size_t length);
     time_t getCollectTime();
     std::string getVin();
     bool noneGetData() {return m_noneGetData;}
@@ -149,13 +152,14 @@ private:
     bool m_allGetData; // 初始值 true，如果任何一次查询中没得到数据，则置为 false
 
     class DataGenerator* m_dataGenerator;
-    void getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
-    void getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
-    void getLocationFromDBAndUpdateStruct();
+    void getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[], const size_t& size);
+    //void getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
+    void getLocationFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
     void initFixedData(void);
-    void updateBySigTypeCode(const uint32_t& signalTypeCode, uint8_t* sigValAddr);
+    void updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigValAddr);
+    void updateBySigTypeCode(const uint32_t& signalTypeCode, const std::string& sigVal);
     void updateCollectTime(const time_t& collectTime);
-
+    bool isNotParkCharge();
 };
 
 

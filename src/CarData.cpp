@@ -18,6 +18,7 @@
 #include <exception.h>
 #include <warning.h>
 #include <string.h>
+#include <stdlib.h>
 
 using namespace std;
 using namespace bytebuf;
@@ -46,48 +47,60 @@ DataUnit: 6+1+20+1+13+1+9+1+14+1+5=72
 
 // complete
 const static uint32_t sigArray_CBV[] = {
-    OPCODE_VCU_POWERON2REQ,
-    OPCODE_BMS_BATT_CHARGE_STS,
-    OPCODE_ESC_VEHICLE_SPEED,
-    //OPCODE_ICU_TOTAL_METER, // 累计里程4字节，需从其他表获取
-    OPCODE_BMS_BATT_TOTAL_VOLT,
-    OPCODE_BMS_BATT_TOTAL_CURR,
-    OPCODE_BCM_LBMS_SOC,
-    OPCODE_DCDC_WORKING_STS,
-    OPCODE_VCU_GEAR_LEVEL_POS_STS,
-    OPCODE_BMS_ISO_RESSISTANCE_LEVEL
+    OPCODE_VCU_POWERON2REQ, // 1010211
+    OPCODE_BMS_BATT_CHARGE_STS, // 1030102
+    OPCODE_ESC_VEHICLE_SPEED, // 1100409
+    OPCODE_ICU_TOTAL_METER,       // 1070108 累计里程4字节
+    OPCODE_BMS_BATT_TOTAL_VOLT, // 1030201 电压单位V，小数
+    OPCODE_BMS_BATT_TOTAL_CURR, // 1030202 电流单位A，小数
+    OPCODE_BCM_LBMS_SOC, // 1060115
+    OPCODE_DCDC_WORKING_STS, // 1040101
+    OPCODE_VCU_GEAR_LEVEL_POS_STS, // 1010105
+    OPCODE_BMS_ISO_RESSISTANCE_LEVEL// 1030116
 };
 const static uint32_t sigArray_DM[] = {
-    // 缺 驱动电机状态
-    OPCODE_MCU_TEMP,
-    OPCODE_MCU_MOTOR_RPM,
-    OPCODE_MCU_ACTUALTORQUEFB,
-    OPCODE_MCU_MOTOR_TEMP,
-    OPCODE_MCU_MAINWIREVOLT,
-    OPCODE_MCU_MAINWIRECURR,
+    DM_Status, // 1 缺 驱动电机状态 test
+    OPCODE_MCU_TEMP, // 1020202 may negative,
+    OPCODE_MCU_MOTOR_RPM, // 1020101 may negative,
+    OPCODE_MCU_ACTUALTORQUEFB, // 1020108 扭矩单位N*m,小数 may negative,
+    OPCODE_MCU_MOTOR_TEMP, // 1020201 may negative,
+    OPCODE_MCU_MAINWIREVOLT, // 1020203 电机控制器输入电压单位mV may negative,
+    OPCODE_MCU_MAINWIRECURR // 1020204 电机控制器直流母线电流单位mA may negative,
 };
 // 未定
-const static uint32_t sigArray_Location[] = {};
-// 缺太多
-const static uint32_t sigArray_EV[] = {};
-// 缺太多
-const static uint32_t sigArray_Alarm[] = {};
-// 长度超过2字节的信号单独处理
-const static uint32_t sigArray_Big[] = {
-    OPCODE_ICU_TOTAL_METER //累计里程4字节
+const static uint32_t sigArray_Location[] = {
+    L_Longitude, // 经度
+    L_Latitude // 纬度 顺序固定
 };
-
+// 缺太多
+const static uint32_t sigArray_EV[] = {
+    EV_MaxVoltageMonomerCode, // 4
+    OPCODE_BMS_CELLMAXVOLT, // 1030601
+    EV_MinVoltageMonomerCode, // 5
+    OPCODE_BMS_CELLMINVOLT, // 1030603
+    EV_MaxTemperatureProbeCode, // 6
+    OPCODE_BMS_BATT_MAX_TEMP, // 1030401 may negative,
+    EV_MinTemperatureProbeCode, // 7
+    OPCODE_BMS_BATT_MIN_TEMP // 1030402 may negative,
+};
+// 缺太多
+const static uint32_t sigArray_Alarm[] = {
+    OPCODE_VCU_VEHICLE_WARNING, // 1010104
+    A_GeneralAlarmSigns // 8 通用报警标志 4字节
+};
 // 程序运行过程中新车机发送完整数据时调用此构造函数
+
 CarData::CarData(const string& vin, DataGenerator* motorInfoUpload) : m_vin(vin), m_dataGenerator(motorInfoUpload) {
     if (VINLEN != vin.length())
         throw runtime_error("CarData(): illegal vin");
-//    m_noneGetData = true;
-//    m_allGetData = true;
+    //    m_noneGetData = true;
+    //    m_allGetData = true;
 
     initFixedData();
 }
 
 // 程序初始化从数据库读取数据时调用此构造函数
+
 CarData::CarData(const CarBaseInfo& carInfo, DataGenerator* motorInfoUpload) : m_vin(carInfo.vin), m_dataGenerator(motorInfoUpload) {
     if (VINLEN != carInfo.vin.length())
         throw runtime_error("CarData(): illegal vin");
@@ -98,8 +111,8 @@ CarData::CarData(const CarBaseInfo& carInfo, DataGenerator* motorInfoUpload) : m
 
     m_dataGenerator->m_prepStmtForGps->setUInt64(1, carInfo.carId);
     m_dataGenerator->m_prepStmtForSig->setUInt64(1, carInfo.carId);
-    m_dataGenerator->m_prepStmtForBigSig->setUInt64(1, carInfo.carId);
-    
+//    m_dataGenerator->m_prepStmtForBigSig->setUInt64(1, carInfo.carId);
+
     initFixedData();
 }
 
@@ -118,6 +131,10 @@ string CarData::getVin() {
 }
 
 void CarData::initFixedData() {
+    m_data.CBV_chargeStatus = 0xfe; // 后面需要根据充电状态做处理，所以默认值设为无效。
+    // To do 所有字段默认值设为无效 0xfe
+    
+// 以下是根据实际情况的固定值    
     m_data.startCode[0] = '#';
     m_data.startCode[1] = '#';
     m_data.responseFlag = 0xfe;
@@ -132,6 +149,7 @@ void CarData::initFixedData() {
     m_data.DM_Num = 1;
     m_data.DM_sequenceCode = 1;
     m_data.L_typeCode = 5;
+    m_data.L_status &= 0x60; // 0110 0000 第0位（0有效，1无效）、第3~7位（保留）设为0 
     m_data.EV_typeCode = 6;
     m_data.EV_maxVoltageSysCode = 1;
     m_data.EV_minVoltageSysCode = 1;
@@ -141,127 +159,194 @@ void CarData::initFixedData() {
 }
 
 /*
- * not done
- * signal value may be nagetive
+ * @sigVal
+ * is from car_signal.signal_value(varchar 50), maybe float, nagetive, uint8_t, uint16_t, uint32_t, 
+ * 测试通过
  */
-void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, uint8_t* sigValAddr) {
-
+void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, const string& sigVal) {
     switch (signalTypeCode) {
-        case 106:
+        case OPCODE_MCU_ACTUALTORQUEFB: // 1020108 扭矩单位N*m,小数
+        case OPCODE_BMS_BATT_TOTAL_VOLT: // 1020203 总电压单位V，小数
+        case OPCODE_BMS_BATT_TOTAL_CURR: // 1020204 总电流单位A，小数
+            float sigValFlt;
+            sigValFlt = atof(sigVal.c_str());
+            updateBySigTypeCode(signalTypeCode, (int8_t*) & sigValFlt);
+            break;
+        default:
+            int64_t sigValLong = 0; // 用long型是因为通用报警标志可能为 0xffffffff,int型装不下
+            int32_t sigValInt = 0;
+            // sigVal maybe -123, 100, ，0xffff, 2 bytes or 1 byte
+            sigValLong = atol(sigVal.c_str());
+            if (sigValLong < 0) {
+                sigValInt = (int32_t)sigValLong;
+                updateBySigTypeCode(signalTypeCode, (int8_t*) & sigValInt);
+            }
+            else
+                updateBySigTypeCode(signalTypeCode, (int8_t*) & sigValLong);
+            break;
+    }
+}
+
+/*
+ * not done
+ * 缺的信号先自定义，到时候只要改缺的信号就行，数据转换已完成
+ * 字符数字测试通过
+ * 数据转换规则参考 Docs/零云平台-整车数据信号整理.xlsx
+ * signal value may be nagetive or deciaml
+ */
+void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigValAddr) {
+    switch (signalTypeCode) {
+        case OPCODE_VCU_POWERON2REQ:
             m_data.CBV_vehicleStatus = *sigValAddr;
             break;
-            /*
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 409:
-                        m_data.CBV_speed = *(uint16_t*)sigValAddr;
-                        break;
-                    case 108:
-                        m_data.CBV_mileages = *(uint32_t*)sigValAddr;
-                        break;
-                    case 201:
-                        m_data.CBV_totalVoltage = *(uint16_t*)sigValAddr;
-                        break;
-                    case 202:
-                        m_data.CBV_totalCurrent = *(uint16_t*)sigValAddr;
-                        break;
-                    case 113:
-                        m_data.CBV_soc = *sigValAddr;
-                        break;
-                    case 101:
-                        m_data.CBV_dcdcStatus = *sigValAddr;
-                        break;
-                    case 105:
-                        m_data.CBV_gear = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_insulationResistance = *(uint16_t*)sigValAddr;
-                        break;
-                    case 0:
-                        m_data.DM_status = *sigValAddr;
-                        break;
-                    case 202:
-                        m_data.DM_controllerTemperature = *sigValAddr;
-                        break;
-                    case 101:
-                        m_data.DM_rotationlSpeed = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-                    case 106:
-                        m_data.CBV_vehicleStatus = *sigValAddr;
-                        break;
-                    case 102:
-                        m_data.CBV_chargeStatus = *sigValAddr;
-                        break;
-             */
+        case OPCODE_BMS_BATT_CHARGE_STS:
+            m_data.CBV_chargeStatus = *sigValAddr;
+            break;
+        case OPCODE_ESC_VEHICLE_SPEED:
+            m_data.CBV_speed = *(uint16_t*) sigValAddr * 10;
+            break;
+        case OPCODE_ICU_TOTAL_METER:
+            m_data.CBV_mileages = *(uint32_t*) sigValAddr * 10;
+            break;
+        case OPCODE_BMS_BATT_TOTAL_VOLT:
+            m_data.CBV_totalVoltage = *(float*) sigValAddr * 10;
+            break;
+        case OPCODE_BMS_BATT_TOTAL_CURR:
+            m_data.CBV_totalCurrent = *(float*) sigValAddr * 10;
+            break;
+        case OPCODE_BCM_LBMS_SOC:
+            m_data.CBV_soc = *sigValAddr;
+            break;
+        case OPCODE_DCDC_WORKING_STS:
+            m_data.CBV_dcdcStatus = (0 == *sigValAddr) ? 2 : 1;
+            break;
+        case OPCODE_VCU_GEAR_LEVEL_POS_STS:
+        {
+            uint8_t first4bit = 3;
+            uint8_t last4bit;
+            switch (*sigValAddr) {
+                case 1:last4bit = 0xf;
+                    break;
+                case 2:last4bit = 0xd;
+                    break;
+                case 3:last4bit = 0;
+                    break;
+                case 4:last4bit = 0xe;
+                    break;
+                default:
+                    throw runtime_error("CarData::updateBySigTypeCode(): Illegal gear: " + *sigValAddr);
+            }
+            m_data.CBV_gear = (first4bit << 4) + last4bit;
+            break;
+        }
+        case OPCODE_BMS_ISO_RESSISTANCE_LEVEL:
+            m_data.CBV_insulationResistance = *(uint16_t*) sigValAddr;
+            break;
+        case DM_Status:
+            m_data.DM_status = *sigValAddr;
+            break;
+        case OPCODE_MCU_TEMP:   // 温度值 取值范围 -40~210 可能2字节，可能1字节，按2字节读取，最终转换结果为1字节
+            m_data.DM_controllerTemperature = *(int16_t*)sigValAddr + 40;
+            break;
+        case OPCODE_MCU_MOTOR_RPM:
+            m_data.DM_rotationlSpeed = *(int16_t*) sigValAddr + 20000;
+            break;
+        case OPCODE_MCU_ACTUALTORQUEFB:
+            m_data.DM_torque = *(float*) sigValAddr * 10 + 20000;
+            break;
+        case OPCODE_MCU_MOTOR_TEMP:
+            m_data.DM_temperature = *(int16_t*) sigValAddr + 40;
+            break;
+        case OPCODE_MCU_MAINWIREVOLT:
+            m_data.DM_controllerInputVoltage = *(uint16_t*) sigValAddr * 10;
+            break;
+        case OPCODE_MCU_MAINWIRECURR:
+            m_data.DM_controllerDCBusCurrent = *(int16_t*) sigValAddr * 10 + 10000;
+            break;
+        case L_Longitude:
+        { //经度 假设车机经纬度数据是一定一起发送的。
+            int32_t longitude = *(int32_t*) sigValAddr;
+            if (longitude < 0) {
+                m_data.L_status |= 0x20; // 第2位（东西经）设为1，西经
+                m_data.L_longitudeAbs -= longitude;
+            } else {
+                m_data.L_status &= 0xdf; // 第2位（东西经）设为0，东经
+                m_data.L_longitudeAbs = longitude;
+            }
+            break;
+        }
+        case L_Latitude:
+        {
+            int32_t latitude = *(int32_t*) sigValAddr;
+            if (latitude < 0) {
+                m_data.L_status |= 0x40; // 0100 0000 第1位（北南纬）设为1，南纬
+                m_data.L_latitudeAbs -= latitude;
+            } else {
+                m_data.L_status &= 0xbf; // 1011 1111 第1位（北南纬）设为0，北纬
+                m_data.L_latitudeAbs = latitude;
+            }
+            break;
+        }
+        case EV_MaxVoltageMonomerCode:
+            m_data.EV_maxVoltageMonomerCode = *sigValAddr + 1;
+            break;
+        case OPCODE_BMS_CELLMAXVOLT:
+            m_data.EV_maxVoltage = *(uint16_t*) sigValAddr;
+            break;
+        case EV_MinVoltageMonomerCode:
+            m_data.EV_minVoltageMonomerCode = *sigValAddr + 1;
+            break;
+        case OPCODE_BMS_CELLMINVOLT:
+            m_data.EV_minVoltage = *(uint16_t*) sigValAddr;
+            break;
+        case EV_MaxTemperatureProbeCode:
+            m_data.EV_maxTemperatureProbeCode = *sigValAddr + 1;
+            break;
+        case OPCODE_BMS_BATT_MAX_TEMP:
+            m_data.EV_maxTemperature = *(int16_t*)sigValAddr + 40;
+            break;
+        case EV_MinTemperatureProbeCode:
+            m_data.EV_minTemperatureProbeCode = *sigValAddr + 1;
+            break;
+        case OPCODE_BMS_BATT_MIN_TEMP:
+            m_data.EV_minTemperature = *(int16_t*)sigValAddr + 40;
+            break;
+        case OPCODE_VCU_VEHICLE_WARNING:
+            switch (*sigValAddr) {
+                case 0: m_data.A_highestAlarmLevel = 0;
+                    break;
+                case 1: m_data.A_highestAlarmLevel = 3;
+                    break;
+                case 2: m_data.A_highestAlarmLevel = 2;
+                    break;
+                case 3: m_data.A_highestAlarmLevel = 1;
+                    break;
+                default: throw runtime_error("CarData::updateBySigTypeCode(): Illegal generalAlarmSigns: " + *sigValAddr);
+            }
+        case A_GeneralAlarmSigns:
+            m_data.A_generalAlarmSigns = *(int32_t*) sigValAddr;
+            break;
         default:
-            throw runtime_error("CarData::updateBySigTypeCode(): Illegal signalTypeCode");
+            throw runtime_error("CarData::updateBySigTypeCode(): Illegal signalTypeCode：" + signalTypeCode);
     }
 }
 
 void CarData::createByDataFromDB(const bool& isReissue, const time_t& collectTime) {
     // 2字节以内数据从 car_signal 表取，2字节以上数据从其他表取
 
-    getSigFromDBAndUpdateStruct(sigArray_CBV);
+    getSigFromDBAndUpdateStruct(sigArray_CBV, sizeof(sigArray_CBV)/sizeof(uint32_t));
     // 国标：停车充电过程中无需传输驱动电机数据
-    if (PARKANDCHARGE != m_data.CBV_chargeStatus)
-        getSigFromDBAndUpdateStruct(sigArray_DM);
-    getLocationFromDBAndUpdateStruct();
-    getSigFromDBAndUpdateStruct(sigArray_EV);
-    getSigFromDBAndUpdateStruct(sigArray_Alarm);
-
-    getBigSigFromDBAndUpdateStruct(sigArray_Big);
+    // 若不是补发数据，则是创建基础数据，需要获取DM数据
+    if (2 == m_data.CBV_chargeStatus
+            || 3 == m_data.CBV_chargeStatus
+            || 4 == m_data.CBV_chargeStatus
+            || !isReissue) {
+        getSigFromDBAndUpdateStruct(sigArray_DM, sizeof(sigArray_DM)/sizeof(uint32_t));
+    }
+    getLocationFromDBAndUpdateStruct(sigArray_Location);
+    getSigFromDBAndUpdateStruct(sigArray_EV, sizeof(sigArray_EV)/sizeof(uint32_t));
+    getSigFromDBAndUpdateStruct(sigArray_Alarm, sizeof(sigArray_Alarm)/sizeof(uint32_t));
+    //getBigSigFromDBAndUpdateStruct(sigArray_Big);
 
     updateCollectTime(collectTime);
 
@@ -309,7 +394,7 @@ void CarData::updateCollectTime(const time_t& collectTime) {
     m_collectTime = collectTime;
     struct tm* currUploadTimeTM = localtime(&m_collectTime);
     m_data.year = currUploadTimeTM->tm_year - 100;
-    m_data.mon = currUploadTimeTM->tm_mon;
+    m_data.mon = currUploadTimeTM->tm_mon + 1;  // [0-11]
     m_data.mday = currUploadTimeTM->tm_mday;
     m_data.hour = currUploadTimeTM->tm_hour;
     m_data.min = currUploadTimeTM->tm_min;
@@ -320,21 +405,23 @@ void CarData::updateCollectTime(const time_t& collectTime) {
  * 从 car_signal 表读取信号值，信号值长度为2字节
  * 若没有数据返回false
  */
-void CarData::getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
+void CarData::getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[], const size_t& size) {
     if (0 == sizeof (signalCodeArray))
         return;
 
     ResultSet* result = NULL;
 
     try {
-        uint16_t sigVal;
-        
-        for (int i = 0; i < sizeof (signalCodeArray); i++) {
+        string sigVal;
+
+        for (int i = 0; i < size; i++) {
             m_dataGenerator->m_prepStmtForSig->setUInt(2, signalCodeArray[i]);
+            // 挂了
             result = m_dataGenerator->m_prepStmtForSig->executeQuery();
             if (result->next()) {
-                sigVal = result->getInt("signal_value");
-                updateBySigTypeCode(signalCodeArray[i], (uint8_t*) & sigVal);
+                //sigVal = result->getInt("signal_value");
+                sigVal = result->getString("signal_value");
+                updateBySigTypeCode(signalCodeArray[i], sigVal);
                 m_noneGetData = false;
             } else
                 m_allGetData = false;
@@ -350,13 +437,14 @@ void CarData::getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
             delete result;
             result = NULL;
         }
-        throw e;
+        throw;
     }
 }
 
 /*
+ * abandon
  * 从 car_signal1 表读取信号值，信号值长度为4字节
- */
+
 void CarData::getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
     if (0 == sizeof (signalCodeArray))
         return;
@@ -365,16 +453,15 @@ void CarData::getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
 
     try {
         uint32_t sigVal;
-        
+
         for (int i = 0; i < sizeof (signalCodeArray); i++) {
             m_dataGenerator->m_prepStmtForBigSig->setUInt(2, signalCodeArray[i]);
             result = m_dataGenerator->m_prepStmtForBigSig->executeQuery();
             if (result->next()) {
                 sigVal = result->getUInt("signal_value");
-                updateBySigTypeCode(signalCodeArray[i], (uint8_t*) & sigVal);
+                updateBySigTypeCode(signalCodeArray[i], (int8_t*) & sigVal);
                 m_noneGetData = false;
-            }
-            else
+            } else
                 m_allGetData = false;
 
             if (NULL != result) {
@@ -387,31 +474,26 @@ void CarData::getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
             delete result;
             result = NULL;
         }
-        throw e;
+        throw;
     }
-}
+} */
 
 /*
  * not done
  * 车机MQ最多30s上传一次
  * 从 car_trace_gps_info 表获取定位数据
  */
-void CarData::getLocationFromDBAndUpdateStruct() {
+void CarData::getLocationFromDBAndUpdateStruct(const uint32_t signalCodeArray[]) {
     ResultSet* result = NULL;
 
-    // 等其他信号码确定好，再确定这两个
-    uint32_t latitudeSigTypeCode = 12123;
-    uint32_t longitudeSigTypeCode = 12124;
-
     try {
-        int latitude, longitude;
-        
+        int32_t longitude, latitude;
         result = m_dataGenerator->m_prepStmtForGps->executeQuery();
         if (result->next()) {
-            latitude = (int) result->getDouble("latitude") * 1000000;
-            longitude = (int) result->getDouble("longitude") * 1000000;
-            updateBySigTypeCode(latitudeSigTypeCode, (uint8_t*) & latitude);
-            updateBySigTypeCode(longitudeSigTypeCode, (uint8_t*) & longitude);
+            longitude = (int32_t) (result->getDouble("longitude") * 1000000);
+            latitude = (int32_t) (result->getDouble("latitude") * 1000000);
+            updateBySigTypeCode(signalCodeArray[0], (int8_t*) & longitude);
+            updateBySigTypeCode(signalCodeArray[1], (int8_t*) & latitude);
             m_noneGetData = false;
         } else
             m_allGetData = false;
@@ -425,34 +507,44 @@ void CarData::getLocationFromDBAndUpdateStruct() {
             delete result;
             result = NULL;
         }
-        throw e;
+        throw;
     }
 }
 
 // data format expected like | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | time(8) | ... |
 
-void CarData::updateStructByMQ(uint8_t* ptr, size_t length) {
+void CarData::updateStructByMQ(int8_t* ptr, size_t length) {
     if (NULL == ptr || 1 > length)
         throw runtime_error("updateStructByMQ(): IllegalArgument");
 
-    uint8_t sigValLen;
-    uint32_t sigTypeCode;
-    time_t collectTime;
+    int8_t sigValLen = 0;
+    uint32_t sigTypeCode = 0;
+    time_t collectTime = 0;
+    uint32_t signalVal = 0; // 接受数据最大为4字节，不足的0填充
     for (size_t i = 0; i < length;) {
         if (i + 1 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         sigValLen = *(ptr + i);
+        if (sigValLen > 4 || sigValLen <= 0)
+            throw runtime_error("updateStructByMQ(): Illegal sigValLen: " + sigValLen);
         i + 1;
 
         if (i + 4 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
-        sigTypeCode = *(uint32_t*) (ptr + i);
-        i += 4;
-
+        sigTypeCode += *(ptr + i++) << 24;
+        sigTypeCode += *(ptr + i++) << 16;
+        sigTypeCode += *(ptr + i++) << 8;
+        sigTypeCode += *(ptr + i++);
+//        sigTypeCode = *(uint32_t*) (ptr + i);
+//        i += 4;
         if (i + sigValLen > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
-        updateBySigTypeCode(sigTypeCode, ptr + i);
-        i += sigValLen;
+        
+        for (int j = 0; j < sigValLen; j++, i++) {
+            signalVal += *(ptr + i) << 8*(sigValLen - j - 1);
+        }
+        updateBySigTypeCode(sigTypeCode, (int8_t*)&signalVal);
+//        i += sigValLen;
 
         if (i + 8 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
@@ -460,4 +552,8 @@ void CarData::updateStructByMQ(uint8_t* ptr, size_t length) {
         updateCollectTime(collectTime);
         i += 8;
     }
+}
+
+bool CarData::isNotParkCharge() {
+    return (2 == m_data.CBV_chargeStatus || 3 == m_data.CBV_chargeStatus || 4 == m_data.CBV_chargeStatus);
 }

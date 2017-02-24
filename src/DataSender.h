@@ -14,6 +14,7 @@
 #ifndef DATASENDER_H
 #define DATASENDER_H
 #include "DataFormat.h"
+#include "DBConnection.h"
 
 #pragma pack(1)
 typedef struct {
@@ -40,18 +41,20 @@ typedef struct {
 } LogoutData_t;
 #pragma pack()
 
-class DataSender {
+class DataSender : public DBConnection {
 public:
     DataSender(StaticResource* staticResource);
-    DataSender(const DataSender& orig);
+//    DataSender(const DataSender& orig);
     virtual ~DataSender();
     void run(void);
 private:
     LoginData_t m_loginData;
     LogoutData_t m_logoutData;
+//    sql::Connection* DBConn;
+//    sql::Statement* DBState;
     
-    StaticResource* m_staticResource;
-    blockqueue::BlockQueue<bytebuf::ByteBuffer*>* m_dataQueue;
+//    StaticResource* m_staticResource;
+//    blockqueue::BlockQueue<bytebuf::ByteBuffer*>* m_dataQueue;
     int m_writeFd;
     int m_readFd;
     time_t m_lastUploadTime;
@@ -66,7 +69,7 @@ private:
     void sendDataTask(void);
     void updateLastUploadTimeIntoDB(void);
     void sendData(uint8_t* addr, size_t length);
-    
+//    void closeDBConnection();
 
 };
 

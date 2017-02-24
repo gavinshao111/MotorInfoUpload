@@ -36,6 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/CarData.o \
+	${OBJECTDIR}/src/DBConnection.o \
 	${OBJECTDIR}/src/DataGenerator.o \
 	${OBJECTDIR}/src/DataSender.o \
 	${OBJECTDIR}/src/MotorInfoUpload.o
@@ -68,6 +69,11 @@ ${OBJECTDIR}/src/CarData.o: src/CarData.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/CarData.o src/CarData.cpp
+
+${OBJECTDIR}/src/DBConnection.o: src/DBConnection.cpp
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/DBConnection.o src/DBConnection.cpp
 
 ${OBJECTDIR}/src/DataGenerator.o: src/DataGenerator.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

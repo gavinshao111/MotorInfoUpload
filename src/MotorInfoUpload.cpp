@@ -31,20 +31,20 @@ using namespace bytebuf;
 
 void dataGeneratorTask(DataGenerator* dataGenerator);
 void dataSenderTask(DataSender* dataSender);
-void setupDBConnection(StaticResource& staticResource);
-void closeDBConnection(StaticResource& staticResource);
+void testForSqlE(StaticResource& staticResource);
 #if TEST
 extern const string vinForTest = "0123456789abcdefg";
-extern const string StrlastUploadTimeForTest = "2017-02-17 11:23:03";
+extern const string StrlastUploadTimeForTest = "2017-02-21 08:23:03";
 #endif
+
 int main(int argc, char** argv) {
     StaticResource staticResource;
     try {
         staticResource.PublicServerIp = "10.34.16.76";
         staticResource.PublicServerPort = 1234;
-        staticResource.PublicServerUserName = "helloworld";
-        staticResource.PublicServerPassword = "helloworld";
-        staticResource.Period = 3600;
+        staticResource.PublicServerUserName = "123456789012";
+        staticResource.PublicServerPassword = "12345678901234567890";
+        staticResource.Period = 3600*24;
         staticResource.EncryptionAlgorithm = enumEncryptionAlgorithm::null;
         staticResource.DBHostName = "tcp://120.26.86.124:3306";
         staticResource.DBUserName = "root";
@@ -60,74 +60,82 @@ int main(int argc, char** argv) {
 
         staticResource.DBDriver = get_driver_instance();
         staticResource.dataQueue = new BlockQueue<DataPtrLen*>(100);
-        setupDBConnection(staticResource);
-
+//        setupDBConnection(staticResource);
 
         if (false) {
-            time_t time;
-            char strCurrUploadTime[20];
-            struct tm* currUploadTimeTM;
-            PreparedStatement* prepStmt = NULL;
-            const static string sqlTemplate = "update car_infokey set infovalue=(?) where infokey='gblastupload'";
-            int result = -1;
-            
-            prepStmt = staticResource.DBConn->prepareStatement(sqlTemplate);
-            prepStmt->setString(1, "2017-02-17 11:23:03");
-            result = prepStmt->executeUpdate();
-            delete prepStmt;
-            cout << result << endl;
-            
-            memset(strCurrUploadTime, 0, sizeof (strCurrUploadTime));
-            DataGenerator::getLastUploadInfo(&staticResource, time);
-            currUploadTimeTM = localtime(&time);
-            strftime(strCurrUploadTime, 19, TIMEFORMAT, currUploadTimeTM);
-            cout << strCurrUploadTime << endl;
+            testForSqlE(staticResource);
         } else {
             DataGenerator* dataGenerator = new DataGenerator(&staticResource);
             DataSender* dataSender = new DataSender(&staticResource);
 
-            thread DataGeneratorThread(dataGeneratorTask, dataGenerator);
             thread DataSenderThread(dataSenderTask, dataSender);
-
-            DataGeneratorThread.join();
+            thread DataGeneratorThread(dataGeneratorTask, dataGenerator);
             DataSenderThread.join();
+            cout << "DataSenderThread existed." << endl;
+            DataGeneratorThread.join();
+            cout << "DataGeneratorThread existed." << endl;
         }
-        goto Finally;
-
     } catch (exception &e) {
         cout << "ERROR: Exception in " << __FILE__;
         cout << " (" << __func__ << ") on line " << __LINE__ << endl;
         cout << "ERROR: " << e.what() << endl;
-        goto Finally;
     }
-Finally:
-    closeDBConnection(staticResource);
+//    closeDBConnection(staticResource);
     cout << "done." << endl;
     return 0;
 }
 
 void dataGeneratorTask(DataGenerator* dataGenerator) {
+    cout << "DataGenerator:" << this_thread::get_id() << endl;
     dataGenerator->run();
 }
 
 void dataSenderTask(DataSender* dataSender) {
+    cout << "DataSender:" << this_thread::get_id() << endl;
     dataSender->run();
 }
 
-void setupDBConnection(StaticResource& staticResource) {
-    staticResource.DBConn = staticResource.DBDriver->connect(staticResource.DBHostName, staticResource.DBUserName, staticResource.DBPassword);
-    //conn->setAutoCommit(false);
-    staticResource.DBState = staticResource.DBConn->createStatement();
-    staticResource.DBState->execute("use lpcarnet");
-}
-
-void closeDBConnection(StaticResource& staticResource) {
-    if (NULL != staticResource.DBState) {
-        staticResource.DBState->close();
-        delete staticResource.DBState;
-    }
-    if (NULL != staticResource.DBConn && staticResource.DBConn->isClosed()) {
-        staticResource.DBConn->close();
-        delete staticResource.DBConn;
-    }
+//void setupDBConnection(StaticResource& staticResource) {
+//    staticResource.DBConn = staticResource.DBDriver->connect(staticResource.DBHostName, staticResource.DBUserName, staticResource.DBPassword);
+//    //conn->setAutoCommit(false);
+//    staticResource.DBState = staticResource.DBConn->createStatement();
+//    staticResource.DBState->execute("use lpcarnet");
+//
+//    cout << "setupDBConnection: " << staticResource.DBConn->isClosed() << endl;
+//}
+//
+//void closeDBConnection(StaticResource& staticResource) {
+//    if (NULL != staticResource.DBState) {
+//        staticResource.DBState->close();
+//        delete staticResource.DBState;
+//    }
+//    if (NULL != staticResource.DBConn && !staticResource.DBConn->isClosed()) {
+//        staticResource.DBConn->close();
+//        delete staticResource.DBConn;
+//    }
+//}
+//
+void testForSqlE(StaticResource& staticResource) {
+//    PreparedStatement* prepStmt = NULL;
+//    try {
+//        time_t time;
+//        char strCurrUploadTime[20] = {0};
+//        struct tm* currUploadTimeTM;
+//        const static string sqlTemplate = "update car_infokey1 set infovalue=(?) where infokey='gblastupload'";
+//
+//        prepStmt = staticResource.DBConn->prepareStatement(sqlTemplate);
+//        prepStmt->setString(1, "2017-02-17 11:23:03");
+//        assert(1 == prepStmt->executeUpdate());
+//        delete prepStmt;
+//
+//        DataGenerator::getLastUploadInfo(&staticResource, time);
+//        currUploadTimeTM = localtime(&time);
+//        strftime(strCurrUploadTime, 19, TIMEFORMAT, currUploadTimeTM);
+//        cout << strCurrUploadTime << endl;
+//
+//    } catch (SQLException& e) {
+//        if (NULL != prepStmt)
+//            delete prepStmt;
+//        throw;
+//    }
 }
