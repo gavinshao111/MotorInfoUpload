@@ -91,12 +91,12 @@ void DataGenerator::run(void) {
     m_prepStmtForGps = m_DBConn->prepareStatement(sqlTemplate_car_trace_gps_info);
 
     thread generateDataThreadB(&DataGenerator::generateDataTaskB, this);
-    //thread generateDataThreadA(&DataGenerator::generateDataTaskA, this);
+    thread generateDataThreadA(&DataGenerator::generateDataTaskA, this);
 
     generateDataThreadB.join();
     cout << "generateDataThreadB existed." << endl;
-    //generateDataThreadA.join();
-    //cout << "generateDataThreadA existed." << endl;
+    generateDataThreadA.join();
+    cout << "generateDataThreadA existed." << endl;
 
 }
 
@@ -163,6 +163,8 @@ void DataGenerator::generateDataTaskB() {
         freePrepStatement();
         closeDBConnection();
 
+#define TaskBLoopTask false
+#if TaskBLoopTask
         //task4: 当周期时间点到达时，遍历map，将最近一个周期内没有上传的车机数据丢入队列，最近一个周期内已上传过的车机不重复上传。
         for (;;) {
             sleep(m_staticResource->Period - (time(NULL) - periodTaskBeginTime));
@@ -172,6 +174,7 @@ void DataGenerator::generateDataTaskB() {
                     m_staticResource->dataQueue->put(it->second->createDataCopy());
             }
         }
+#endif
     } catch (exception &e) {
         cout << "ERROR: Exception in " << __FILE__;
         cout << " (" << __func__ << ") on line " << __LINE__ << endl;
@@ -224,17 +227,17 @@ void DataGenerator::updateCarList() {
 void DataGenerator::createCarListDataFromDB(const bool& isReissue, const bool& send) {
     for (int carIndex = 0; carIndex < m_allCarArray.size(); carIndex++) {
         CarData* carData = new CarData(m_allCarArray[carIndex], this);
-#if DEBUG
-        cout << m_allCarArray[carIndex].carId << ": " << endl;
-#endif
         // 时间范围内取到数据才上传
         carData->createByDataFromDB(isReissue, m_currUploadTime);
         if (send) {
             if (!carData->noneGetData()) {
                 m_staticResource->dataQueue->put(carData->createDataCopy());
+#if DEBUG
+                cout << m_allCarArray[carIndex].vin << ": put into dataQueue" << endl;
+#endif
                 delete carData;
             } else {
-                cout << "noneGetData for " << m_allCarArray[carIndex].vin << endl;
+                cout << m_allCarArray[carIndex].vin << ": noneGetData" << endl;
             }
         } else {
             /*
@@ -293,6 +296,8 @@ static void connlost(void *context, char *cause) {
 /*
  * 解析topic，payload，得到车机ID （信号码，信号值）数组
  * 去dataMap找到这个车机的CarData，循环调用 updateBySigTypeCode m_dataQueue->put(m_carDataIterator->second->createDataCopy());
+ * @param topicLen
+ * always == 0, i don't why.
  */
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
     try {
@@ -301,23 +306,25 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
             throw runtime_error("msgarrvd(): IllegalArgument context");
 
         DataGenerator* dataGenerator = (DataGenerator*) context;
+        const string& topic = dataGenerator->m_staticResource->MQTopic;
         // topicName is expected like "/1234567/lpcloud/candata"
-        if (NULL == topicName || 1 > topicLen)
+        if (NULL == topicName)
             throw runtime_error("msgarrvd(): IllegalArgument topic");
 
+        topicLen = strlen(topicName);
         size_t ofstAfterVin;
 
         if ('/' != *topicName)
             throw runtime_error("msgarrvd(): IllegalArgument topic");
-        for (ofstAfterVin = 0; ofstAfterVin < topicLen; ofstAfterVin++) {
+        for (ofstAfterVin = 1; ofstAfterVin < topicLen; ofstAfterVin++) {
             if ('/' == *(topicName + ofstAfterVin))
                 break;
         }
 
-        if ((topicLen - ofstAfterVin) != (dataGenerator->m_staticResource->MQTopic.length() - 2))
+        if ((topicLen - ofstAfterVin) != (topic.length() - 2))
             throw runtime_error("msgarrvd(): IllegalArgument topic");
 
-        if (0 != strncmp(topicName + ofstAfterVin, dataGenerator->m_staticResource->MQTopic.c_str() + 2, dataGenerator->m_staticResource->MQTopic.length() - 2))
+        if (0 != strncmp(topicName + ofstAfterVin, topic.c_str() + 2, topic.length() - 2))
             throw runtime_error("msgarrvd(): IllegalArgument topic");
 
         string vin(topicName + 1, ofstAfterVin - 1);
@@ -409,11 +416,11 @@ void DataGenerator::setTimeLimit(const time_t& to, const time_t& from /* = 0*/) 
 
     timeTM = localtime(&to);
     strftime(strTime, 19, TIMEFORMAT, timeTM);
-    
+
 #if DEBUG
     cout << "setTimeLimit: to = " << strTime;
 #endif    
-    
+
     m_prepStmtForSig->setDateTime(3, strTime);
     //    m_prepStmtForBigSig->setDateTime(3, strTime);
     m_prepStmtForGps->setDateTime(2, strTime);
@@ -422,7 +429,8 @@ void DataGenerator::setTimeLimit(const time_t& to, const time_t& from /* = 0*/) 
     timeTM = localtime(&from);
     strftime(strTime, 19, TIMEFORMAT, timeTM);
 #if DEBUG
-    cout << ", from = " << strTime << endl;;
+    cout << ", from = " << strTime << endl;
+    ;
 #endif    
     m_prepStmtForSig->setDateTime(4, strTime);
     //    m_prepStmtForBigSig->setDateTime(4, strTime);

@@ -15,6 +15,7 @@
 #include "SignalTypeCode.h"
 #include "prepared_statement.h"
 #include "DataGenerator.h"
+#include "Util.h"
 #include <exception.h>
 #include <warning.h>
 #include <string.h>
@@ -50,7 +51,7 @@ const static uint32_t sigArray_CBV[] = {
     OPCODE_VCU_POWERON2REQ, // 1010211
     OPCODE_BMS_BATT_CHARGE_STS, // 1030102
     OPCODE_ESC_VEHICLE_SPEED, // 1100409
-    OPCODE_ICU_TOTAL_METER,       // 1070108 累计里程4字节
+    OPCODE_ICU_TOTAL_METER, // 1070108 累计里程4字节
     OPCODE_BMS_BATT_TOTAL_VOLT, // 1030201 电压单位V，小数
     OPCODE_BMS_BATT_TOTAL_CURR, // 1030202 电流单位A，小数
     OPCODE_BCM_LBMS_SOC, // 1060115
@@ -111,7 +112,7 @@ CarData::CarData(const CarBaseInfo& carInfo, DataGenerator* motorInfoUpload) : m
 
     m_dataGenerator->m_prepStmtForGps->setUInt64(1, carInfo.carId);
     m_dataGenerator->m_prepStmtForSig->setUInt64(1, carInfo.carId);
-//    m_dataGenerator->m_prepStmtForBigSig->setUInt64(1, carInfo.carId);
+    //    m_dataGenerator->m_prepStmtForBigSig->setUInt64(1, carInfo.carId);
 
     initFixedData();
 }
@@ -133,8 +134,8 @@ string CarData::getVin() {
 void CarData::initFixedData() {
     m_data.CBV_chargeStatus = 0xfe; // 后面需要根据充电状态做处理，所以默认值设为无效。
     // To do 所有字段默认值设为无效 0xfe
-    
-// 以下是根据实际情况的固定值    
+
+    // 以下是根据实际情况的固定值    
     m_data.startCode[0] = '#';
     m_data.startCode[1] = '#';
     m_data.responseFlag = 0xfe;
@@ -178,10 +179,9 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, const string& 
             // sigVal maybe -123, 100, ，0xffff, 2 bytes or 1 byte
             sigValLong = atol(sigVal.c_str());
             if (sigValLong < 0) {
-                sigValInt = (int32_t)sigValLong;
+                sigValInt = (int32_t) sigValLong;
                 updateBySigTypeCode(signalTypeCode, (int8_t*) & sigValInt);
-            }
-            else
+            } else
                 updateBySigTypeCode(signalTypeCode, (int8_t*) & sigValLong);
             break;
     }
@@ -234,7 +234,9 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
                 case 4:last4bit = 0xe;
                     break;
                 default:
-                    throw runtime_error("CarData::updateBySigTypeCode(): Illegal gear: " + *sigValAddr);
+                    char errMsg[256] = "CarData::updateBySigTypeCode(): Illegal gear: ";
+                    snprintf(errMsg + strlen(errMsg), 1, "%d", *sigValAddr);
+                    throw runtime_error(errMsg);
             }
             m_data.CBV_gear = (first4bit << 4) + last4bit;
             break;
@@ -245,8 +247,8 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
         case DM_Status:
             m_data.DM_status = *sigValAddr;
             break;
-        case OPCODE_MCU_TEMP:   // 温度值 取值范围 -40~210 可能2字节，可能1字节，按2字节读取，最终转换结果为1字节
-            m_data.DM_controllerTemperature = *(int16_t*)sigValAddr + 40;
+        case OPCODE_MCU_TEMP: // 温度值 取值范围 -40~210 可能2字节，可能1字节，按2字节读取，最终转换结果为1字节
+            m_data.DM_controllerTemperature = *(int16_t*) sigValAddr + 40;
             break;
         case OPCODE_MCU_MOTOR_RPM:
             m_data.DM_rotationlSpeed = *(int16_t*) sigValAddr + 20000;
@@ -254,7 +256,7 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
         case OPCODE_MCU_ACTUALTORQUEFB:
             m_data.DM_torque = *(float*) sigValAddr * 10 + 20000;
             break;
-        case OPCODE_MCU_MOTOR_TEMP:
+        case OPCODE_MCU_MOTOR_TEMP: //车机端：所有温度信号值如果为负，需要传2字节
             m_data.DM_temperature = *(int16_t*) sigValAddr + 40;
             break;
         case OPCODE_MCU_MAINWIREVOLT:
@@ -280,7 +282,7 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
             int32_t latitude = *(int32_t*) sigValAddr;
             if (latitude < 0) {
                 m_data.L_status |= 0x40; // 0100 0000 第1位（北南纬）设为1，南纬
-                m_data.L_latitudeAbs -= latitude;
+                m_data.L_latitudeAbs = -latitude;
             } else {
                 m_data.L_status &= 0xbf; // 1011 1111 第1位（北南纬）设为0，北纬
                 m_data.L_latitudeAbs = latitude;
@@ -303,13 +305,13 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
             m_data.EV_maxTemperatureProbeCode = *sigValAddr + 1;
             break;
         case OPCODE_BMS_BATT_MAX_TEMP:
-            m_data.EV_maxTemperature = *(int16_t*)sigValAddr + 40;
+            m_data.EV_maxTemperature = *(int16_t*) sigValAddr + 40;
             break;
         case EV_MinTemperatureProbeCode:
             m_data.EV_minTemperatureProbeCode = *sigValAddr + 1;
             break;
         case OPCODE_BMS_BATT_MIN_TEMP:
-            m_data.EV_minTemperature = *(int16_t*)sigValAddr + 40;
+            m_data.EV_minTemperature = *(int16_t*) sigValAddr + 40;
             break;
         case OPCODE_VCU_VEHICLE_WARNING:
             switch (*sigValAddr) {
@@ -321,31 +323,36 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
                     break;
                 case 3: m_data.A_highestAlarmLevel = 1;
                     break;
-                default: throw runtime_error("CarData::updateBySigTypeCode(): Illegal generalAlarmSigns: " + *sigValAddr);
+                default:
+                    char errMsg[256] = "CarData::updateBySigTypeCode(): Illegal generalAlarmSigns: ";
+                    snprintf(errMsg + strlen(errMsg), 1, "%d", *sigValAddr);
+                    throw runtime_error(errMsg);
             }
         case A_GeneralAlarmSigns:
             m_data.A_generalAlarmSigns = *(int32_t*) sigValAddr;
             break;
         default:
-            throw runtime_error("CarData::updateBySigTypeCode(): Illegal signalTypeCode：" + signalTypeCode);
+            char errMsg[256] = "CarData::updateBySigTypeCode(): Illegal signalTypeCode: ";
+            snprintf(errMsg + strlen(errMsg), 4, "%d", signalTypeCode);
+            throw runtime_error(errMsg);
     }
 }
 
 void CarData::createByDataFromDB(const bool& isReissue, const time_t& collectTime) {
     // 2字节以内数据从 car_signal 表取，2字节以上数据从其他表取
 
-    getSigFromDBAndUpdateStruct(sigArray_CBV, sizeof(sigArray_CBV)/sizeof(uint32_t));
+    getSigFromDBAndUpdateStruct(sigArray_CBV, sizeof (sigArray_CBV) / sizeof (uint32_t));
     // 国标：停车充电过程中无需传输驱动电机数据
     // 若不是补发数据，则是创建基础数据，需要获取DM数据
     if (2 == m_data.CBV_chargeStatus
             || 3 == m_data.CBV_chargeStatus
             || 4 == m_data.CBV_chargeStatus
             || !isReissue) {
-        getSigFromDBAndUpdateStruct(sigArray_DM, sizeof(sigArray_DM)/sizeof(uint32_t));
+        getSigFromDBAndUpdateStruct(sigArray_DM, sizeof (sigArray_DM) / sizeof (uint32_t));
     }
     getLocationFromDBAndUpdateStruct(sigArray_Location);
-    getSigFromDBAndUpdateStruct(sigArray_EV, sizeof(sigArray_EV)/sizeof(uint32_t));
-    getSigFromDBAndUpdateStruct(sigArray_Alarm, sizeof(sigArray_Alarm)/sizeof(uint32_t));
+    getSigFromDBAndUpdateStruct(sigArray_EV, sizeof (sigArray_EV) / sizeof (uint32_t));
+    getSigFromDBAndUpdateStruct(sigArray_Alarm, sizeof (sigArray_Alarm) / sizeof (uint32_t));
     //getBigSigFromDBAndUpdateStruct(sigArray_Big);
 
     updateCollectTime(collectTime);
@@ -394,7 +401,7 @@ void CarData::updateCollectTime(const time_t& collectTime) {
     m_collectTime = collectTime;
     struct tm* currUploadTimeTM = localtime(&m_collectTime);
     m_data.year = currUploadTimeTM->tm_year - 100;
-    m_data.mon = currUploadTimeTM->tm_mon + 1;  // [0-11]
+    m_data.mon = currUploadTimeTM->tm_mon + 1; // [0-11]
     m_data.mday = currUploadTimeTM->tm_mday;
     m_data.hour = currUploadTimeTM->tm_hour;
     m_data.min = currUploadTimeTM->tm_min;
@@ -517,38 +524,50 @@ void CarData::updateStructByMQ(int8_t* ptr, size_t length) {
     if (NULL == ptr || 1 > length)
         throw runtime_error("updateStructByMQ(): IllegalArgument");
 
-    int8_t sigValLen = 0;
-    uint32_t sigTypeCode = 0;
-    time_t collectTime = 0;
-    uint32_t signalVal = 0; // 接受数据最大为4字节，不足的0填充
+    int8_t sigValLen;
+    uint32_t sigTypeCode;
+    time_t collectTime;
+    uint8_t signalVal[4]; // 接受数据最大为4字节，不足的0填充
     for (size_t i = 0; i < length;) {
+        sigValLen = 0;
+        sigTypeCode = 0;
+        collectTime = 0;
+        memset(signalVal, 0, sizeof (signalVal));
+
         if (i + 1 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         sigValLen = *(ptr + i);
-        if (sigValLen > 4 || sigValLen <= 0)
-            throw runtime_error("updateStructByMQ(): Illegal sigValLen: " + sigValLen);
-        i + 1;
+
+        if (0 == sigValLen)
+            break;
+        else if (sigValLen > 4 || sigValLen < 0) {
+            char errMsg[256] = "CarData::updateStructByMQ(): Illegal sigValLen: ";
+            snprintf(errMsg + strlen(errMsg), 4, "%d", sigValLen);
+            throw runtime_error(errMsg);
+        }
+        i++;
 
         if (i + 4 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
-        sigTypeCode += *(ptr + i++) << 24;
-        sigTypeCode += *(ptr + i++) << 16;
-        sigTypeCode += *(ptr + i++) << 8;
-        sigTypeCode += *(ptr + i++);
-//        sigTypeCode = *(uint32_t*) (ptr + i);
-//        i += 4;
+
+        sigTypeCode = *(uint32_t*) (ptr + i);
+        i += 4;
+        Util::BigToLittleEndian((uint8_t*) & sigTypeCode, 4);
+
         if (i + sigValLen > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
-        
-        for (int j = 0; j < sigValLen; j++, i++) {
-            signalVal += *(ptr + i) << 8*(sigValLen - j - 1);
-        }
-        updateBySigTypeCode(sigTypeCode, (int8_t*)&signalVal);
-//        i += sigValLen;
+
+        //        Util::printBinary(*(uint8_t*) (ptr + i));
+        memcpy(signalVal, ptr + i, sigValLen);
+        Util::BigToLittleEndian(signalVal, sigValLen);
+        i += sigValLen;
+
+        updateBySigTypeCode(sigTypeCode, (int8_t*) signalVal);
 
         if (i + 8 > length)
             throw runtime_error("updateStructByMQ(): MQ payload too small");
         collectTime = *(time_t*) (ptr + i);
+        Util::BigToLittleEndian((uint8_t*) & collectTime, 8);
         updateCollectTime(collectTime);
         i += 8;
     }
@@ -557,3 +576,4 @@ void CarData::updateStructByMQ(int8_t* ptr, size_t length) {
 bool CarData::isNotParkCharge() {
     return (2 == m_data.CBV_chargeStatus || 3 == m_data.CBV_chargeStatus || 4 == m_data.CBV_chargeStatus);
 }
+

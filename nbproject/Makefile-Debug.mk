@@ -39,7 +39,8 @@ OBJECTFILES= \
 	${OBJECTDIR}/src/DBConnection.o \
 	${OBJECTDIR}/src/DataGenerator.o \
 	${OBJECTDIR}/src/DataSender.o \
-	${OBJECTDIR}/src/MotorInfoUpload.o
+	${OBJECTDIR}/src/MotorInfoUpload.o \
+	${OBJECTDIR}/src/Util.o
 
 
 # C Compiler Flags
@@ -89,6 +90,11 @@ ${OBJECTDIR}/src/MotorInfoUpload.o: src/MotorInfoUpload.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/MotorInfoUpload.o src/MotorInfoUpload.cpp
+
+${OBJECTDIR}/src/Util.o: src/Util.cpp
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Util.o src/Util.cpp
 
 # Subprojects
 .build-subprojects:

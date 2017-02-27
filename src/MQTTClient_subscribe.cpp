@@ -9,6 +9,8 @@ g++ MQTTClient_subscribe.cpp -I$ED/paho.mqtt.c/src -L$ED/paho.mqtt.c/build/outpu
 #include <iostream>
 #include <stdint.h>
 #include <assert.h>
+#include <exception>
+#include <stdexcept>
 
 using namespace std;
 
@@ -19,7 +21,8 @@ using namespace std;
 #define TIMEOUT     10000L
 #define MQTTCLIENT_PERSISTENCE_NONE 1
 volatile MQTTClient_deliveryToken deliveredtoken;
-
+void printBinaryNumber(const int8_t& src);
+void BigToLittleEndian(uint8_t src[], const size_t& size);
 void delivered(void *context, MQTTClient_deliveryToken dt) {
     printf("Message with token value %d delivery confirmed\n", dt);
     deliveredtoken = dt;
@@ -27,31 +30,48 @@ void delivered(void *context, MQTTClient_deliveryToken dt) {
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
     int i = 0;
-    uint8_t* payloadptr;
-
-    //    printf("Message arrived\n");
-    //    printf("     topic: %s\n", topicName);
-    //    printf("   message: ");
-    //
-    payloadptr = (uint8_t*) message->payload;
+    int8_t* ptr;
     uint32_t sigTypeCode = 0;
-    //    uint16_t v = *(uint16_t*)payloadptr;
-    //    cout << "v: " << v << endl;
-    assert(message->payloadlen == 4);
+    int8_t sigValLen = 0;
+    size_t length = 0;
+    uint8_t signalVal[4] = {0};
 
-    sigTypeCode += *(payloadptr) << 24;
-    sigTypeCode += *(payloadptr + 1) << 16;
-    sigTypeCode += *(payloadptr + 2) << 8;
-    sigTypeCode += *(payloadptr + 3);
-    printf("%d\n", sigTypeCode);
+    printf("Message arrived, topic: %s\n", topicName);
 
-    sigTypeCode = 0;
-    sigTypeCode += *(payloadptr) * 0x1000000;
-    sigTypeCode += *(payloadptr + 1) * 0x10000;
-    sigTypeCode += *(payloadptr + 2) * 0x100;
-    sigTypeCode += *(payloadptr + 3);
-    printf("%d\n", sigTypeCode);
+    ptr = (int8_t*) message->payload;
+    length = message->payloadlen;
+
+    if (i + 1 > length)
+        throw runtime_error("updateStructByMQ(): MQ payload too small");
+    sigValLen = *(ptr + i);
+
+    if (0 == sigValLen)
+        return 1;
+    else if (sigValLen > 4 || sigValLen < 0) {
+        char errMsg[256] = "CarData::updateStructByMQ(): Illegal sigValLen: ";
+        snprintf(errMsg + strlen(errMsg), 4, "%d", sigValLen);
+        throw runtime_error(errMsg);
+    }
+    i++;
+
+    if (i + 4 > length)
+        throw runtime_error("updateStructByMQ(): MQ payload too small");
+
+    sigTypeCode = *(uint32_t*)(ptr + i);
+    BigToLittleEndian((uint8_t*)&sigTypeCode, 4);
+    i += 4;
+
+    if (i + sigValLen > length)
+        throw runtime_error("updateStructByMQ(): MQ payload too small");
+
+
+    uint32_t  val = *(uint32_t*)(ptr + i);
+    BigToLittleEndian((uint8_t*)&val, sigValLen);
+//    printf("%d\n", val);
     
+    i += sigValLen;
+
+    cout << "sigValLen: " << (int) sigValLen << ", sigTypeCode: " << sigTypeCode << ", signalVal: " << val << endl;
     putchar('\n');
     //    for (i = 0; i < message->payloadlen; i++) {
     //        putchar(*payloadptr++);
@@ -72,7 +92,7 @@ void connlost(void *context, char *cause) {
 int main(int argc, char* argv[]) {
 
     string MQServerUrl = "tcp://120.26.86.124:1883";
-    string topic = "/1234/videoinfoAsk";
+    string topic = "/+/lpcloud/candata";
 
 
     MQTTClient client;
@@ -105,4 +125,23 @@ int main(int argc, char* argv[]) {
     MQTTClient_destroy(&client);
 
     return 0;
+}
+void printBinaryNumber(const int8_t& src) {
+    for (int i = 0; i < 8; i++) {
+        printf("%d ", src >> (7 - i) & 1);
+    }
+    putchar('\n');
+}
+void BigToLittleEndian(uint8_t src[], const size_t& size) {
+    if (NULL == src || 0 == size)
+        return;
+
+    uint8_t* copy = new uint8_t[size] ;
+    memcpy(copy, src, size);
+    
+    int j = 0;
+    for (; j < size; j++) {
+        src[j] = copy[size - j - 1];
+    }
+    delete copy;
 }
