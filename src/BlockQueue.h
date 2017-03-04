@@ -45,7 +45,7 @@ namespace blockqueue {
         void put(DataT data) {
             std::unique_lock<std::mutex> lk(m_mutex);
             while (isFull()) {
-                std::cout << "BlockQueue::queue is full, put is blocking." << std::endl;
+//                std::cout << "BlockQueue::queue is full, put is blocking." << std::endl;
                 m_notFull.wait(lk);
             }
             m_queue.push_back(data);
@@ -55,7 +55,7 @@ namespace blockqueue {
         DataT take(void) {
             std::unique_lock<std::mutex> lk(m_mutex);
             while (isEmpty()) {
-                std::cout << "BlockQueue::queue is empty, take is blocking." << std::endl;
+//                std::cout << "BlockQueue::queue is empty, take is blocking." << std::endl;
                 m_notEmpty.wait(lk);
             }
             DataT data = m_queue.front();

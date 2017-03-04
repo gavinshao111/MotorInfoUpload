@@ -52,17 +52,16 @@ void DBConnection::closeDBConnection() {
     }
 }
 
-void DBConnection::getLastUploadInfo(time_t& uploadTime) {
+void DBConnection::getLastUploadInfoFromDB(time_t& uploadTime) {
     ResultSet *result = NULL;
     try {
         result = m_DBState->executeQuery("select infovalue from car_infokey where infokey = 'gblastupload'");
         if (result->next()) {
             //carIndex = result->getInt("carIndex");
             string strtime = result->getString("infovalue");
-#if TEST
-            assert(0 == StrlastUploadTimeForTest.compare(strtime));
-#endif
-
+//#if DEBUG
+//            cout << "get last upload time: " << strtime << endl;
+//#endif
             struct tm tmTemp;
             strptime(strtime.data(), TIMEFORMAT, &tmTemp);
             uploadTime = mktime(&tmTemp);

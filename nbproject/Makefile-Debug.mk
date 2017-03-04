@@ -38,6 +38,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/src/CarData.o \
 	${OBJECTDIR}/src/DBConnection.o \
 	${OBJECTDIR}/src/DataGenerator.o \
+	${OBJECTDIR}/src/DataPtrLen.o \
 	${OBJECTDIR}/src/DataSender.o \
 	${OBJECTDIR}/src/MotorInfoUpload.o \
 	${OBJECTDIR}/src/Util.o
@@ -80,6 +81,11 @@ ${OBJECTDIR}/src/DataGenerator.o: src/DataGenerator.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/DataGenerator.o src/DataGenerator.cpp
+
+${OBJECTDIR}/src/DataPtrLen.o: src/DataPtrLen.cpp
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -IExternalDependencies/mysqlcpp/include -IExternalDependencies/mysqlcpp/include/cppconn -IExternalDependencies/SafeStrCpy -I../ByteBuffer -I../paho.mqtt.c/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/DataPtrLen.o src/DataPtrLen.cpp
 
 ${OBJECTDIR}/src/DataSender.o: src/DataSender.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

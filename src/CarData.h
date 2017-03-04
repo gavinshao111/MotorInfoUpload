@@ -17,91 +17,6 @@
 #include "DataFormat.h"
 //#include "prepared_statement.h"
 
-#define ALARMDATALEN 6
-#define MAXDATAUNITLEN ALARMDATALEN+66
-
-#define PARKANDCHARGE 1
-
-#pragma pack(1)
-
-typedef struct CarSignalData {
-    uint8_t startCode[2];
-    uint8_t CmdId;
-    uint8_t responseFlag;
-    uint8_t vin[VINLEN];
-    uint8_t encryptionAlgorithm;
-    uint16_t dataUnitLength;
-
-    //uint8_t dataUnit[72];
-    uint8_t year;
-    uint8_t mon;
-    uint8_t mday;
-    uint8_t hour;
-    uint8_t min;
-    uint8_t sec;
-
-    // CompletelyBuildedVehicle
-    uint8_t CBV_typeCode;
-    uint8_t CBV_vehicleStatus; // 1
-    uint8_t CBV_chargeStatus; // 1
-    uint8_t CBV_runningMode; // 1
-    uint16_t CBV_speed; // 2
-    uint32_t CBV_mileages; // 4
-    uint16_t CBV_totalVoltage; // 2
-    uint16_t CBV_totalCurrent; // 2
-    uint8_t CBV_soc; // 1
-    uint8_t CBV_dcdcStatus; // 1
-    uint8_t CBV_gear; // 1
-    uint16_t CBV_insulationResistance; // 2
-    uint16_t CBV_reverse; // 2    
-
-    // DriveMotor
-    uint8_t DM_typeCode;
-    uint8_t DM_Num; // 1;  // our car only have one
-    uint8_t DM_sequenceCode;
-    uint8_t DM_status; // 1
-    uint8_t DM_controllerTemperature; // 1
-    uint16_t DM_rotationlSpeed; // 2
-    uint16_t DM_torque; // 2
-    uint8_t DM_temperature; // 1
-    uint16_t DM_controllerInputVoltage; // 2
-    uint16_t DM_controllerDCBusCurrent; // 2    
-
-    // Location
-    uint8_t L_typeCode;
-    
-    uint8_t L_status;
-    uint32_t L_longitudeAbs;
-    uint32_t L_latitudeAbs;
-
-    // Extreme Value
-    uint8_t EV_typeCode;
-    uint8_t EV_maxVoltageSysCode;
-    uint8_t EV_maxVoltageMonomerCode;
-    uint16_t EV_maxVoltage;
-    uint8_t EV_minVoltageSysCode;
-    uint8_t EV_minVoltageMonomerCode;
-    uint16_t EV_minVoltage;
-    uint8_t EV_maxTemperatureSysCode;
-    uint8_t EV_maxTemperatureProbeCode;
-    uint8_t EV_maxTemperature;
-    uint8_t EV_minTemperatureSysCode;
-    uint8_t EV_minTemperatureProbeCode;
-    uint8_t EV_minTemperature;
-
-    // Alarm
-    uint8_t A_typeCode;
-    uint8_t A_highestAlarmLevel;
-    uint32_t A_generalAlarmSigns;
-
-    // checkCode 应放在复制时计算
-    // uint8_t checkCode;
-
-
-} CarSigData_t;
-
-#pragma pack()
-
 
 
 
@@ -136,17 +51,18 @@ public:
 
     virtual ~CarData();
     void createByDataFromDB(const bool& isReissue, const time_t& collectTime);
-    DataPtrLen* createDataCopy();
+    DataPtrLen* createDataCopy(const bool& isReissue = false);
     // data format expected like | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | ... |
     void updateStructByMQ(int8_t* ptr, size_t length);
-    time_t getCollectTime();
-    std::string getVin();
-    bool noneGetData() {return m_noneGetData;}
-    bool allGetData() {return m_allGetData;}
+    const time_t& getCollectTime() const;
+    const std::string& getVin() const;
+    const bool& noneGetData() const {return m_noneGetData;}
+    const bool& allGetData() const {return m_allGetData;}
+    void updateCollectTime(const time_t& collectTime);
 private:
     std::string m_vin;
     time_t m_collectTime;
-    CarSigData_t m_data;
+    CarSigData_t m_carSigData;
 
     bool m_noneGetData; // 初始值 true，如果任何一次查询中得到数据，则置为 false
     bool m_allGetData; // 初始值 true，如果任何一次查询中没得到数据，则置为 false
@@ -155,11 +71,9 @@ private:
     void getSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[], const size_t& size);
     //void getBigSigFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
     void getLocationFromDBAndUpdateStruct(const uint32_t signalCodeArray[]);
-    void initFixedData(void);
+//    void initFixedData(void);
     void updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigValAddr);
     void updateBySigTypeCode(const uint32_t& signalTypeCode, const std::string& sigVal);
-    void updateCollectTime(const time_t& collectTime);
-    bool isNotParkCharge();
 };
 
 

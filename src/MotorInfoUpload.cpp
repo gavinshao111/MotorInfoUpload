@@ -34,17 +34,17 @@ void dataSenderTask(DataSender* dataSender);
 void testForSqlE(StaticResource& staticResource);
 #if TEST
 extern const string vinForTest = "0123456789abcdefg";
-extern const string StrlastUploadTimeForTest = "2017-02-21 08:23:03";
+extern const string StrlastUploadTimeForTest = "2017-03-01 13:27:15";
 #endif
 
 int main(int argc, char** argv) {
     StaticResource staticResource;
     try {
-        staticResource.PublicServerIp = "10.34.16.76";
+        staticResource.PublicServerIp = "10.34.16.94";
         staticResource.PublicServerPort = 1234;
         staticResource.PublicServerUserName = "123456789012";
         staticResource.PublicServerPassword = "12345678901234567890";
-        staticResource.Period = 3600*24;
+        staticResource.Period = 60;
         staticResource.EncryptionAlgorithm = enumEncryptionAlgorithm::null;
         staticResource.DBHostName = "tcp://120.26.86.124:3306";
         staticResource.DBUserName = "root";

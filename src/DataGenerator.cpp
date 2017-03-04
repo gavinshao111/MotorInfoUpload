@@ -20,15 +20,16 @@
 #include <exception.h>
 #include "SignalTypeCode.h"
 #include "CarData.h"
+#include "Util.h"
 
 using namespace std;
 using namespace sql;
 
 using namespace blockqueue;
 
-const static string sqlTemplate_car_signal = "select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1";
+const static string sqlTemplate_car_signal = "select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<=(?) and build_time>(?) order by build_time desc limit 1";
 //const static string sqlTemplate_car_signal1 = "select signal_value, build_time from car_signal1 where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1";
-const static string sqlTemplate_car_trace_gps_info = "select latitude, longitude from car_trace_gps_info where carid=(?) and location_time<(?) and location_time>(?) order by location_time desc limit 1";
+const static string sqlTemplate_car_trace_gps_info = "select latitude, longitude from car_trace_gps_info where carid=(?) and location_time<=(?) and location_time>(?) order by location_time desc limit 1";
 //const static string sqlTemplate_car_decimal = "select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1";
 
 #if TEST
@@ -119,9 +120,10 @@ void DataGenerator::generateDataTaskB() {
         time_t periodTaskBeginTime;
 
         periodTaskBeginTime = time(NULL);
-
-        // test is in function
-        getLastUploadInfo(lastTime);
+#if DEBUG
+        cout << "periodTaskBeginTime: " << Util::timeToStr(periodTaskBeginTime) << endl;
+#endif
+        getLastUploadInfoFromDB(lastTime);
 
         updateCarList();
 #if TEST
@@ -158,20 +160,35 @@ void DataGenerator::generateDataTaskB() {
          * task 2: 从数据库取最新的数据，生成CarData装入以车机id为key的map中。
          * 此时最早时间不再限制，因为需要在map中填充基础数据，如果限制，可能会取不到数据。
          */
-        setTimeLimit(periodTaskBeginTime);
+        
+        m_currUploadTime = periodTaskBeginTime;
+        setTimeLimit(m_currUploadTime);
         createCarListDataFromDB(false, false);
         freePrepStatement();
         closeDBConnection();
+
+        cout << "Reissue data send complete, DB connection closed." << endl;
 
 #define TaskBLoopTask false
 #if TaskBLoopTask
         //task4: 当周期时间点到达时，遍历map，将最近一个周期内没有上传的车机数据丢入队列，最近一个周期内已上传过的车机不重复上传。
         for (;;) {
+#if DEBUG
+            cout << "DataGenerator.TaskB will sleep " << m_staticResource->Period - (time(NULL) - periodTaskBeginTime) << "s to wait for next Period point arrvied." << endl;
+#endif            
             sleep(m_staticResource->Period - (time(NULL) - periodTaskBeginTime));
             periodTaskBeginTime = time(NULL);
             for (CarDataMap::iterator it = m_staticResource->carDataMap.begin(); it != m_staticResource->carDataMap.end(); it++) {
-                if (periodTaskBeginTime - it->second->getCollectTime() > m_staticResource->Period)
+                // 假设周期为1分钟，超过59s没更新，则本周期需上传，否则本周期不再上传。
+//                cout << "periodTaskBeginTime: " << Util::timeToStr(periodTaskBeginTime) << endl;
+//                cout << "it->second->getCollectTime(): " << Util::timeToStr(it->second->getCollectTime()) << endl;
+                if (periodTaskBeginTime - it->second->getCollectTime() > m_staticResource->Period - 1) {
+                    it->second->updateCollectTime(periodTaskBeginTime);
                     m_staticResource->dataQueue->put(it->second->createDataCopy());
+#if DEBUG
+                    cout << "Platform fixed period upload task: " << it->second->getVin() << " didn't update in last period, put into dataQueue" << endl;
+#endif
+                }
             }
         }
 #endif
@@ -231,13 +248,15 @@ void DataGenerator::createCarListDataFromDB(const bool& isReissue, const bool& s
         carData->createByDataFromDB(isReissue, m_currUploadTime);
         if (send) {
             if (!carData->noneGetData()) {
-                m_staticResource->dataQueue->put(carData->createDataCopy());
+                m_staticResource->dataQueue->put(carData->createDataCopy(isReissue));
 #if DEBUG
-                cout << m_allCarArray[carIndex].vin << ": put into dataQueue" << endl;
+                cout << carData->getVin() << ": some signal data updated, put into dataQueue" << endl;
 #endif
                 delete carData;
             } else {
-                cout << m_allCarArray[carIndex].vin << ": noneGetData" << endl;
+#if DEBUG
+                cout << m_allCarArray[carIndex].vin << ": none signal data updated" << endl;
+#endif
             }
         } else {
             /*
@@ -247,47 +266,13 @@ void DataGenerator::createCarListDataFromDB(const bool& isReissue, const bool& s
              */
             assert(carData->allGetData());
             m_staticResource->carDataMap.insert(pair<string, CarData*>(m_allCarArray[carIndex].vin, carData));
-        }
-    }
-}
-
-/*
- * @param uploadTime
- * 上次传输的时间距起始日的秒数
-
-void DataGenerator::getLastUploadInfo(StaticResource* staticResource, time_t& uploadTime) {
-    ResultSet *result = NULL;
-    try {
-        result = staticResource->DBState->executeQuery("select infovalue from car_infokey where infokey = 'gblastupload'");
-        if (result->next()) {
-            //carIndex = result->getInt("carIndex");
-            string strtime = result->getString("infovalue");
-#if TEST
-            assert(0 == StrlastUploadTimeForTest.compare(strtime));
+#if DEBUG
+            cout << carData->getVin() << ": insert into carDataMap" << endl;
 #endif
-
-            struct tm tmTemp;
-            strptime(strtime.data(), TIMEFORMAT, &tmTemp);
-            uploadTime = mktime(&tmTemp);
-        } else {
-            //cout <<  << endl;
-            delete result;
-            throw runtime_error("getLastUploadInfo: gblastupload is empty");
         }
-
-        if (NULL != result) {
-            delete result;
-            result = NULL;
-        }
-    } catch (SQLException &e) {
-        if (NULL != result) {
-            delete result;
-            result = NULL;
-        }
-        throw;
     }
 }
- */
+
 static void connlost(void *context, char *cause) {
     printf("\nConnection lost\n");
     printf("     cause: %s\n", cause);
@@ -341,11 +326,20 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
             //updateCarList();
             carData = new CarData(vin, dataGenerator);
             dataGenerator->m_staticResource->carDataMap.insert(pair<string, CarData*>(vin, carData));
+#if DEBUG
+            cout << "a new car(" << vin << ") upload MQ first time and insert into carDataMap" << endl;
+#endif            
         } else {
             carData = it->second;
+#if DEBUG
+            cout << vin << " upload MQ" << endl;
+#endif            
         }
         carData->updateStructByMQ((int8_t*) message->payload, message->payloadlen);
         dataGenerator->m_staticResource->dataQueue->put(carData->createDataCopy());
+#if DEBUG
+        cout << carData->getVin() << " put into dataQueue" << endl;
+#endif
     } catch (exception &e) {
         cout << "ERROR: Exception in " << __FILE__;
         cout << " (" << __func__ << ") on line " << __LINE__ << endl;
@@ -382,10 +376,11 @@ void DataGenerator::subscribeMq() {
     }
     MQTTClient_subscribe(client, m_staticResource->MQTopic.c_str(), QOS);
 
+    cout << "DataGenerator thread A is subscribing on MQ" << endl;
     do {
-        cout << "DataGenerator thread A is subscribing on MQ" << endl;
         ch = getchar();
     } while (ch != 'Q' && ch != 'q');
+    cout << "DataGenerator thread A read 'q' from stdin, quiting..." << endl;
 
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);
@@ -412,10 +407,10 @@ void DataGenerator::setTimeLimit(const time_t& to, const time_t& from /* = 0*/) 
     if (to < from)
         throw runtime_error("setTimeLimit(): IllegalArgument");
     struct tm* timeTM;
-    char strTime[20] = {0}; // is like "2017-01-17 15:33:03"
+    char strTime[22] = {0}; // is like "2017-01-17 15:33:03"
 
     timeTM = localtime(&to);
-    strftime(strTime, 19, TIMEFORMAT, timeTM);
+    strftime(strTime, sizeof (strTime) - 1, TIMEFORMAT, timeTM);
 
 #if DEBUG
     cout << "setTimeLimit: to = " << strTime;
@@ -427,7 +422,7 @@ void DataGenerator::setTimeLimit(const time_t& to, const time_t& from /* = 0*/) 
 
     memset(strTime, 0, sizeof (strTime));
     timeTM = localtime(&from);
-    strftime(strTime, 19, TIMEFORMAT, timeTM);
+    strftime(strTime, sizeof (strTime) - 1, TIMEFORMAT, timeTM);
 #if DEBUG
     cout << ", from = " << strTime << endl;
     ;

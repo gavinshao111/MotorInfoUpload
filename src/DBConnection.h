@@ -26,7 +26,7 @@ protected:
     StaticResource* m_staticResource;
     void setupDBConnection();
     virtual void closeDBConnection();
-    void getLastUploadInfo(time_t& uploadTime);
+    void getLastUploadInfoFromDB(time_t& uploadTime);
 };
 
 #endif /* DBCONNECTION_H */

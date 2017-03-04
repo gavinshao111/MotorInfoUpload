@@ -34,7 +34,7 @@ void BlockQueue<DataT>::put(DataT data) {
     
     unique_lock<mutex> lk(m_mutex);
     while (isFull()) {
-        cout << "BlockQueue::queue is full, put is blocking." << endl;
+//        cout << "BlockQueue::queue is full, put is blocking." << endl;
         m_notFull.wait(lk);
     }
     m_queue.push_back(data);
@@ -44,7 +44,7 @@ template <class DataT>
 DataT BlockQueue<DataT>::take() {
     unique_lock<mutex> lk(m_mutex);
     while(isEmpty()) {
-        cout << "BlockQueue::queue is empty, take is blocking." << endl;
+//        cout << "BlockQueue::queue is empty, take is blocking." << endl;
         m_notEmpty.wait(lk);        
     }
     DataT* data = m_queue.front();
