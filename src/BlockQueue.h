@@ -23,6 +23,11 @@ namespace blockqueue {
 
     template <class DataT>
     class BlockQueue {
+        std::list<DataT> m_queue;
+        std::mutex m_mutex;
+        std::condition_variable m_notEmpty;
+        std::condition_variable m_notFull;
+        size_t m_capacity;
     public:
 
         BlockQueue(size_t capacity) {
@@ -64,14 +69,6 @@ namespace blockqueue {
             return data;
         }
         //void clearAndFreeElements(void);
-    private:
-
-
-        std::list<DataT> m_queue;
-        std::mutex m_mutex;
-        std::condition_variable m_notEmpty;
-        std::condition_variable m_notFull;
-        size_t m_capacity;
     };
 }
 #endif /* BLOCKQUEUE_H */

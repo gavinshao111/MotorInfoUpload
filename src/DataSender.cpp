@@ -117,9 +117,12 @@ void DataSender::sendDataTask() {
 
 }
 
-void DataSender::updateLoginData(struct tm* nowTM) {
-    if (NULL == nowTM)
-        throw runtime_error("updateLoginData(): IllegalArgument");
+void DataSender::updateLoginData() {
+    time_t now;
+    struct tm* nowTM;
+    now = time(NULL);
+    nowTM = localtime(&now);
+
     m_loginData.year = nowTM->tm_year - 100;
     m_loginData.mon = nowTM->tm_mon + 1;
     m_loginData.mday = nowTM->tm_mday;
@@ -184,7 +187,7 @@ void DataSender::updateLastUploadTimeIntoDB(void) {
         // expect only 1 row affected.
         assert(1 == prepStmt->executeUpdate());
 #if DEBUG
-        cout << "update DB last upload time to " << strCurrUploadTime << endl;
+        cout << "update DB last upload time to " << strCurrUploadTime << "\n\n" << endl;
 #endif        
         delete prepStmt;
     } catch (SQLException &e) {
@@ -208,22 +211,28 @@ void DataSender::updateHeader() {
 
 void DataSender::sendData() {
     time_t now;
-    struct tm* nowTM;
-    struct tm* lastUploadTimeTM;
-
+    struct tm* timeTM;
     updateHeader();
+    
     // 国标：每登入一次，登入流水号自动加1，从1开始循环累加，最大值为65531，循环周期为天。
     now = time(NULL);
-    nowTM = localtime(&now);
-    lastUploadTimeTM = localtime(&m_lastUploadTime);
+    
+    cout << "[DEBUG1] now = " << Util::timeToStr(now) << endl;
+    
+    timeTM = localtime(&now);
+    int mday = timeTM->tm_mday;
+    int mon = timeTM->tm_mon;
+    int year = timeTM->tm_year;
+    localtime(&m_lastUploadTime);
+    
     if (m_serialNumber > 65531
-            || nowTM->tm_mday != lastUploadTimeTM->tm_mday
-            || nowTM->tm_mon != lastUploadTimeTM->tm_mon
-            || nowTM->tm_year != lastUploadTimeTM->tm_year)
+            || mday != timeTM->tm_mday
+            || mon != timeTM->tm_mon
+            || year != timeTM->tm_year)
         m_serialNumber = 1;
 
     // login
-    updateLoginData(nowTM);
+    updateLoginData();
 
     m_RWFd = Util::setupConnectionToTCPServer(m_staticResource->PublicServerIp, m_staticResource->PublicServerPort);
 
@@ -245,7 +254,7 @@ void DataSender::sendData() {
         m_serialNumber++;
 #if DEBUG
         cout << "login done" << endl;
-#endif            
+#endif
 
         // send car signal data
         for (uint8_t i = 0; i < 3; i++) {
@@ -262,7 +271,7 @@ void DataSender::sendData() {
         updateLogoutData();
         tcpSendData(enumCmdCode::platformLogout);
 #if DEBUG
-        cout << "logout done" << endl;
+        cout << "logout done\n\n" << endl;
 #endif            
         close(m_RWFd);
     } catch (exception& e) {

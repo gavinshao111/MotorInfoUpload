@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
         staticResource.PublicServerPort = 1234;
         staticResource.PublicServerUserName = "123456789012";
         staticResource.PublicServerPassword = "12345678901234567890";
-        staticResource.Period = 60;
+        staticResource.Period = 60*60;
         staticResource.EncryptionAlgorithm = enumEncryptionAlgorithm::null;
         staticResource.DBHostName = "tcp://120.26.86.124:3306";
         staticResource.DBUserName = "root";

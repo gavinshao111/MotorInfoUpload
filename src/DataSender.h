@@ -42,7 +42,7 @@ private:
     int m_writeFd;
     int m_RWFd;
     time_t m_lastUploadTime;
-    void updateLoginData(struct tm* nowTM);
+    void updateLoginData();
     void updateLogoutData();
     uint8_t readResponse(const int& timeout);
     void sendDataTask(void);

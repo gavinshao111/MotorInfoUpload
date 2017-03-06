@@ -18,9 +18,12 @@
 #include <string.h>
 
 #include <exception.h>
+#include <condition_variable>
+
 #include "SignalTypeCode.h"
 #include "CarData.h"
 #include "Util.h"
+
 
 using namespace std;
 using namespace sql;
@@ -32,6 +35,8 @@ const static string sqlTemplate_car_signal = "select signal_value, build_time fr
 const static string sqlTemplate_car_trace_gps_info = "select latitude, longitude from car_trace_gps_info where carid=(?) and location_time<=(?) and location_time>(?) order by location_time desc limit 1";
 //const static string sqlTemplate_car_decimal = "select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1";
 
+static mutex _mtx;
+condition_variable isConnlost;
 #if TEST
 extern string vinForTest;
 extern string StrlastUploadTimeForTest;
@@ -104,7 +109,8 @@ void DataGenerator::run(void) {
 void DataGenerator::generateDataTaskA() {
     // do task 3
     try {
-        subscribeMq(); // block here, when MQ arrive, msgarrvd() will be called
+        for(;;)
+            subscribeMq(); // block here, when MQ arrive, msgarrvd() will be called
     } catch (exception &e) {
         cout << "ERROR: Exception in " << __FILE__;
         cout << " (" << __func__ << ") on line " << __LINE__ << endl;
@@ -160,7 +166,7 @@ void DataGenerator::generateDataTaskB() {
          * task 2: 从数据库取最新的数据，生成CarData装入以车机id为key的map中。
          * 此时最早时间不再限制，因为需要在map中填充基础数据，如果限制，可能会取不到数据。
          */
-        
+
         m_currUploadTime = periodTaskBeginTime;
         setTimeLimit(m_currUploadTime);
         createCarListDataFromDB(false, false);
@@ -180,8 +186,8 @@ void DataGenerator::generateDataTaskB() {
             periodTaskBeginTime = time(NULL);
             for (CarDataMap::iterator it = m_staticResource->carDataMap.begin(); it != m_staticResource->carDataMap.end(); it++) {
                 // 假设周期为1分钟，超过59s没更新，则本周期需上传，否则本周期不再上传。
-//                cout << "periodTaskBeginTime: " << Util::timeToStr(periodTaskBeginTime) << endl;
-//                cout << "it->second->getCollectTime(): " << Util::timeToStr(it->second->getCollectTime()) << endl;
+                //                cout << "periodTaskBeginTime: " << Util::timeToStr(periodTaskBeginTime) << endl;
+                //                cout << "it->second->getCollectTime(): " << Util::timeToStr(it->second->getCollectTime()) << endl;
                 if (periodTaskBeginTime - it->second->getCollectTime() > m_staticResource->Period - 1) {
                     it->second->updateCollectTime(periodTaskBeginTime);
                     m_staticResource->dataQueue->put(it->second->createDataCopy());
@@ -274,8 +280,9 @@ void DataGenerator::createCarListDataFromDB(const bool& isReissue, const bool& s
 }
 
 static void connlost(void *context, char *cause) {
-    printf("\nConnection lost\n");
-    printf("     cause: %s\n", cause);
+    printf("\nConnection lost, cause: %s\n", cause);
+    unique_lock<mutex> lk(_mtx);
+    isConnlost.notify_one();
 }
 
 /*
@@ -287,6 +294,7 @@ static void connlost(void *context, char *cause) {
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
     try {
         cout << "MQ arrived: " << topicName << endl;
+//        cout << "msgarrvd:" << this_thread::get_id() << endl;
         if (NULL == context)
             throw runtime_error("msgarrvd(): IllegalArgument context");
 
@@ -377,10 +385,12 @@ void DataGenerator::subscribeMq() {
     MQTTClient_subscribe(client, m_staticResource->MQTopic.c_str(), QOS);
 
     cout << "DataGenerator thread A is subscribing on MQ" << endl;
-    do {
-        ch = getchar();
-    } while (ch != 'Q' && ch != 'q');
-    cout << "DataGenerator thread A read 'q' from stdin, quiting..." << endl;
+    unique_lock<mutex> lk(_mtx);
+    isConnlost.wait(lk);    // 当MQ连接断开时，被唤醒返回，外部再次调用该函数重新连接MQ
+//    do {
+//        ch = getchar();
+//    } while (ch != 'Q' && ch != 'q');
+    cout << "DataGenerator thread A quiting..." << endl;
 
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);

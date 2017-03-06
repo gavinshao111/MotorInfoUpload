@@ -283,7 +283,7 @@ void CarData::updateBySigTypeCode(const uint32_t& signalTypeCode, int8_t* sigVal
             int32_t longitude = *(int32_t*) sigValAddr;
             if (longitude < 0) {
                 m_carSigData.L_status |= 0x20; // 第2位（东西经）设为1，西经
-                m_carSigData.L_longitudeAbs -= longitude;
+                m_carSigData.L_longitudeAbs = -longitude;
             } else {
                 m_carSigData.L_status &= 0xdf; // 第2位（东西经）设为0，东经
                 m_carSigData.L_longitudeAbs = longitude;
