@@ -90,6 +90,10 @@ string Util::timeToStr(const time_t& time) {
     return timeStr;
 }
 
+string Util::nowTimeStr() {
+    return timeToStr(time(NULL));
+}
+
 void Util::sendByTcp(const int& fd, const void* ptr, const size_t& size) {
     size_t sentNum = 0;
     uint8_t* _ptr = (uint8_t*)ptr;
@@ -106,18 +110,17 @@ void Util::sendByTcp(const int& fd, const void* ptr, const size_t& size) {
     }
 }
 
-uint8_t Util::generateBlockCheckCharacter(const uint8_t& first, const void* ptr, const size_t& size) {
-    // put check code. 国标：采用BCC（异或校验）法，校验范围从命令单元的第一个字节开始，同后一字节异或，直到校验码前一字节为止，校验码占用一个字节
+uint8_t Util::generateBlockCheckCharacter(const void* ptr, const size_t& size) {
     if (NULL == ptr || 1 > size )
-        throw runtime_error("Illegal source");
+        throw runtime_error("Util::generateBlockCheckCharacter(): Illegal source");
 
-    uint8_t checkCode = first;
+    uint8_t checkCode = 0;
     uint8_t* _ptr = (uint8_t*)ptr;
     for (size_t i = 0; i < size; i++)
         checkCode ^= _ptr[i];
     return checkCode;
 }
 
-uint8_t Util::generateBlockCheckCharacter(const void* ptr, const size_t& size) {
-    return Util::generateBlockCheckCharacter(*(uint8_t*)ptr, (uint8_t*)ptr + 1, size - 1);
+uint8_t Util::generateBlockCheckCharacter(const bytebuf::ByteBuffer& byteBuffer, const size_t& offset, const size_t& size) {
+    return generateBlockCheckCharacter(&(byteBuffer.at(byteBuffer.position() + offset)), size);
 }

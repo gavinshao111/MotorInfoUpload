@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string>
+#include <time.h>
+#include "ByteBuffer.h"
 
 class Util {
 public:
@@ -26,9 +28,10 @@ public:
     static void printBinary(const uint8_t& src);
     static int setupConnectionToTCPServer(const std::string& ip, const int& port, const bool& nonblock = false);
     static std::string timeToStr(const time_t& time);
+    static std::string nowTimeStr();
     static void sendByTcp(const int& fd, const void* ptr, const size_t& size);
     static uint8_t generateBlockCheckCharacter(const void* ptr, const size_t& size);
-    static uint8_t generateBlockCheckCharacter(const uint8_t& first, const void* ptr, const size_t& size);
+    static uint8_t generateBlockCheckCharacter(const bytebuf::ByteBuffer& byteBuffer, const size_t& offset, const size_t& size);
 private:
 
 };

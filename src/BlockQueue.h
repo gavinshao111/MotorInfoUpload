@@ -30,14 +30,15 @@ namespace blockqueue {
         size_t m_capacity;
     public:
 
-        BlockQueue(size_t capacity) {
-        };
+        BlockQueue(size_t capacity) : m_capacity(capacity)  {
+        }
 
         BlockQueue(const BlockQueue& orig) {
-        };
+            clearAndFreeElements();
+        }
 
         virtual ~BlockQueue() {
-        };
+        }
 
         bool isFull() const {
             return m_queue.size() == m_capacity;
@@ -50,7 +51,7 @@ namespace blockqueue {
         void put(DataT data) {
             std::unique_lock<std::mutex> lk(m_mutex);
             while (isFull()) {
-//                std::cout << "BlockQueue::queue is full, put is blocking." << std::endl;
+                //                std::cout << "BlockQueue::queue is full, put is blocking." << std::endl;
                 m_notFull.wait(lk);
             }
             m_queue.push_back(data);
@@ -60,7 +61,7 @@ namespace blockqueue {
         DataT take(void) {
             std::unique_lock<std::mutex> lk(m_mutex);
             while (isEmpty()) {
-//                std::cout << "BlockQueue::queue is empty, take is blocking." << std::endl;
+                //                std::cout << "BlockQueue::queue is empty, take is blocking." << std::endl;
                 m_notEmpty.wait(lk);
             }
             DataT data = m_queue.front();
@@ -68,7 +69,19 @@ namespace blockqueue {
             m_notFull.notify_one();
             return data;
         }
-        //void clearAndFreeElements(void);
+
+        size_t remaining() {
+            return m_queue.size();
+        }
+
+        void clearAndFreeElements() {
+            std::unique_lock<std::mutex> lk(m_mutex);
+            typename std::list<DataT>::iterator it = m_queue.begin();
+            for (; it != m_queue.end();) {
+                delete *it;
+                it = m_queue.erase(it);
+            }
+        }
     };
 }
 #endif /* BLOCKQUEUE_H */

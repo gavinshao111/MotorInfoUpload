@@ -37,6 +37,7 @@
 #define TIMEFORMAT_ "%d-%02d-%02d %02d:%02d:%02d"
 #define TIMEOUT 1
 #define OK 0
+#define NOTOK 2
 
 #define TEST true
 #define DEBUG true
@@ -66,6 +67,25 @@ typedef enum {
 // a complete data packet is DataPacketHeader_t + ******Data_t + uint8_t checkCode
 
 #pragma pack(1)
+
+/*
+0 "##" | 2 cmdUnit | 4 vin | 21 加密方式 | 22 DataUnitLength=72 | 24 DataUnit | 96 校验码 | 97
+        
+DataUnit: 6+1+20+1+13+1+9+1+14+1+5=72
+    | 24 时间 | 30 整车数据 | 51 驱动数据 | 65 定位数据 | 75 极值数据 | 91 报警数据 | 97 
+
+整车：
+30 1 | 31 车辆状态 | 32 充电状态 | 33 运行模式=1 | 34 车速 | 36 累计里程 | 40 总电压 | 42 总电流 | 44 soc | 45 dcdc | 46 档位 | 47 绝缘电阻 | 49 预留=0 | 51
+驱动电机：
+51 2 | 52 个数=1 | 53 序号=1 | 54 电机状态 | 55 控制器温度 | 56 转速 | 58 转矩 | 60 温度 | 61 电压 | 63 电流 | 65
+车辆位置：
+65 5 | 66 定位数据 | 75
+极值数据：
+75 6 | 76 最高电压系统号 | 77 最高电压单体号 | 78 最高电压值 | 80 最低电压系统号 | 81 最低电压单体号 | 82 最低电压值 | 84 最高温系统号 | 
+85 最高温探针号 | 86 最高温度值 | 87 最低温系统号 | 88 最低温探针号 | 89 最低温度值 | 90
+报警数据：
+90 7 | 91 最高报警等级 | 92 通用报警标志 | 96
+ */
 
 /*
  * DataPacketHeader和checkCode在sender中生成，CarSignalData在Generator生成，并存在内存中不断被更新，需要上传时，生成copy，可能需要将DM数据去除
