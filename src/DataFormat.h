@@ -19,10 +19,10 @@
 #include <vector>
 #include "ByteBuffer.h"
 #include <time.h>
-#include "driver.h"
-#include "mysql_connection.h"
-#include "mysql_driver.h"
-#include "statement.h"
+//#include "driver.h"
+//#include "mysql_connection.h"
+//#include "mysql_driver.h"
+//#include "statement.h"
 #include "BlockQueue.h"
 #include <assert.h>
 #include <mutex>
@@ -247,7 +247,7 @@ typedef struct {
 
     enumEncryptionAlgorithm EncryptionAlgorithm;
 
-    sql::Driver* DBDriver;
+//    sql::Driver* DBDriver;
 
     CarDataMap carDataMap;
     blockqueue::BlockQueue<DataPtrLen*>* dataQueue;

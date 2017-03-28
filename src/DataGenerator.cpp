@@ -16,7 +16,6 @@
 #include <iostream>
 #include <stdio.h>
 #include <string.h>
-
 #include <exception.h>
 #include <condition_variable>
 
@@ -24,19 +23,16 @@
 #include "CarData.h"
 #include "Util.h"
 
-
 using namespace std;
 using namespace sql;
 
 using namespace blockqueue;
 
 const static string sqlTemplate_car_signal = "select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<=(?) and build_time>(?) order by build_time desc limit 1";
-//const static string sqlTemplate_car_signal1 = "select signal_value, build_time from car_signal1 where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1";
 const static string sqlTemplate_car_trace_gps_info = "select latitude, longitude from car_trace_gps_info where carid=(?) and location_time<=(?) and location_time>(?) order by location_time desc limit 1";
-//const static string sqlTemplate_car_decimal = "select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1";
 
 static mutex _mtx;
-condition_variable isConnlost;
+static condition_variable isConnlost;
 #if TEST
 extern string vinForTest;
 extern string StrlastUploadTimeForTest;
@@ -52,33 +48,6 @@ DataGenerator::~DataGenerator() {
  * 车辆补发数据，我平台如何处理
  */
 
-/*
-0 "##" | 2 cmdUnit | 4 vin | 21 加密方式 | 22 DataUnitLength=72 | 24 DataUnit | 96 校验码 | 97
-        
-DataUnit: 6+1+20+1+13+1+9+1+14+1+5=72
-    | 24 时间 | 30 整车数据 | 51 驱动数据 | 65 定位数据 | 75 极值数据 | 91 报警数据 | 97 
-
-整车：
-30 1 | 31 车辆状态 | 32 充电状态 | 33 运行模式=1 | 34 车速 | 36 累计里程 | 40 总电压 | 42 总电流 | 44 soc | 45 dcdc | 46 档位 | 47 绝缘电阻 | 49 预留=0 | 51
-驱动电机：
-51 2 | 52 个数=1 | 53 序号=1 | 54 电机状态 | 55 控制器温度 | 56 转速 | 58 转矩 | 60 温度 | 61 电压 | 63 电流 | 65
-车辆位置：
-65 5 | 66 定位数据 | 75
-极值数据：
-75 6 | 76 最高电压系统号 | 77 最高电压单体号 | 78 最高电压值 | 80 最低电压系统号 | 81 最低电压单体号 | 82 最低电压值 | 84 最高温系统号 | 
-85 最高温探针号 | 86 最高温度值 | 87 最低温系统号 | 88 最低温探针号 | 89 最低温度值 | 90
-报警数据：
-90 7 | 91 最高报警等级 | 92 通用报警标志 | 96
- */
-
-/*
- * task:
- * 1.	补发之前的周期没上传的数据。线程B
- * 2.	从数据库取最新的数据，生成以车机id为key的map中。线程B
- * 3.	订阅MQ，当收到某车机数据时更新map中某车机数据，然后上传public平台。线程A
- * 4.	当周期时间点到达时，遍历map上传全部车机数据。线程B
- * 5.	数据发送任务：发送时先生成登录数据并发送，然后发送车机数据，然后登出，然后更新最后一次完成时间。
- */
 
 void DataGenerator::run(void) {
     if (NULL == m_staticResource->dataQueue) {
@@ -93,7 +62,6 @@ void DataGenerator::run(void) {
     }
 
     m_prepStmtForSig = m_DBConn->prepareStatement(sqlTemplate_car_signal);
-    //    m_prepStmtForBigSig = m_DBConn->prepareStatement(sqlTemplate_car_signal1);
     m_prepStmtForGps = m_DBConn->prepareStatement(sqlTemplate_car_trace_gps_info);
 
     thread generateDataThreadB(&DataGenerator::generateDataTaskB, this);
@@ -119,7 +87,6 @@ void DataGenerator::generateDataTaskA() {
 }
 
 // task 1 -> 2 -> 4
-
 void DataGenerator::generateDataTaskB() {
     try {
         time_t lastTime;
@@ -287,14 +254,14 @@ static void connlost(void *context, char *cause) {
 
 /*
  * 解析topic，payload，得到车机ID （信号码，信号值）数组
- * 去dataMap找到这个车机的CarData，循环调用 updateBySigTypeCode m_dataQueue->put(m_carDataIterator->second->createDataCopy());
+ * 去dataMap找到这个车机的CarData，循环调用
+ * updateStructByMQ m_dataQueue->put(it->second->createDataCopy());
  * @param topicLen
- * always == 0, i don't why.
+ * always == 0, i don't know why.
  */
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
     try {
         cout << "MQ arrived: " << topicName << endl;
-//        cout << "msgarrvd:" << this_thread::get_id() << endl;
         if (NULL == context)
             throw runtime_error("msgarrvd(): IllegalArgument context");
 
@@ -361,7 +328,6 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 void DataGenerator::subscribeMq() {
 
 #define QOS         1
-
 #define MQTTCLIENT_PERSISTENCE_NONE 1
 
     MQTTClient client;
@@ -387,9 +353,6 @@ void DataGenerator::subscribeMq() {
     cout << "DataGenerator thread A is subscribing on MQ" << endl;
     unique_lock<mutex> lk(_mtx);
     isConnlost.wait(lk);    // 当MQ连接断开时，被唤醒返回，外部再次调用该函数重新连接MQ
-//    do {
-//        ch = getchar();
-//    } while (ch != 'Q' && ch != 'q');
     cout << "DataGenerator thread A quiting..." << endl;
 
     MQTTClient_disconnect(client, 10000);
@@ -399,19 +362,14 @@ void DataGenerator::subscribeMq() {
 void DataGenerator::freePrepStatement() {
     if (NULL != m_prepStmtForSig)
         delete m_prepStmtForSig;
-    //    if (NULL != m_prepStmtForBigSig)
-    //        delete m_prepStmtForBigSig;
     if (NULL != m_prepStmtForGps)
         delete m_prepStmtForGps;
-    //    if (NULL != m_prepStmtForDecimal)
-    //        delete m_prepStmtForDecimal;
 }
 
 /*
  * set time limit for
  * select signal_value, build_time from car_signal where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1
- * select signal_value, build_time from car_signal1 where carid=(?) and signal_type=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1
- * select latitude, longitude from car_trace_gps_info where carid=(?) and build_time<(?) and build_time>(?) order by build_time desc limit 1
+ * select latitude, longitude from car_trace_gps_info where carid=(?) and location_time<=(?) and location_time>(?) order by location_time desc limit 1
  */
 void DataGenerator::setTimeLimit(const time_t& to, const time_t& from /* = 0*/) {
     if (to < from)

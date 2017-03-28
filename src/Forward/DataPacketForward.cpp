@@ -30,17 +30,18 @@ DataPacketForward::~DataPacketForward() {
 }
 
 void DataPacketForward::setReissue() {
-    if (m_dataBuf->capacity() < sizeof(DataPacketHeader_t))
+    if (m_dataBuf->capacity() < sizeof (DataPacketHeader_t))
         throw runtime_error("setReissue(): m_dataBuf->capacity() is too small");
-    
-    DataPacketHeader_t* header = (DataPacketHeader_t*)m_dataBuf->array();
+
+    DataPacketHeader_t* header = (DataPacketHeader_t*) m_dataBuf->array();
     header->CmdId = enumCmdCode::reissueUpload;
 }
 // 输出日志需用到
+
 time_t DataPacketForward::getCollectTime() const {
-    if (m_dataBuf->capacity() < sizeof(DataPacketHeader_t) + sizeof(TimeForward_t))
+    if (m_dataBuf->capacity() < sizeof (DataPacketHeader_t) + sizeof (TimeForward_t))
         throw runtime_error("getCollectTime(): m_dataBuf->capacity() is too small");
-    TimeForward_t* time = (TimeForward_t*)(m_dataBuf->array() + sizeof(DataPacketHeader_t));
+    TimeForward_t* time = (TimeForward_t*) (m_dataBuf->array() + sizeof (DataPacketHeader_t));
     struct tm timeTM;
     timeTM.tm_year = time->year + 100;
     timeTM.tm_mon = time->mon - 1;
@@ -48,6 +49,6 @@ time_t DataPacketForward::getCollectTime() const {
     timeTM.tm_hour = time->hour;
     timeTM.tm_min = time->min;
     timeTM.tm_sec = time->sec;
-    
+
     return mktime(&timeTM);
 }

@@ -369,7 +369,8 @@ void Sender::tcpSendData(const enumCmdCode & cmd) {
 /*
  * 国标：当服务端发送应答时，变更应答标志，保留报文时间，并重新计算校验位，删除其他数据。
  * 理解为回应报文结构，头部变更应答标志，其余不变，数据单元只保留数据采集时间，其余删除，重新计算校验位
- * 
+ * 国标2：车辆登入报文作为车辆上线时间节点存在，需收到成功应答后才能进行车辆实时报文的传输。
+ * 企业平台转发上级平台的回应报文：车辆登入成功，所有的失败报文。
  * read server response
  */
 void Sender::readResponse(const int& timeout) {
@@ -414,7 +415,7 @@ void Sender::readResponse(const int& timeout) {
     m_readBuf->flip();
 
     uint8_t chechCode = Util::generateBlockCheckCharacter(*m_readBuf, 2, m_readBuf->remaining() - 3);
-    if (chechCode != m_readBuf->at(m_readBuf->remaining()))
+    if (chechCode != m_readBuf->get(m_readBuf->remaining()))
         cout << "[WARN] Sender::readResponse(): BCC in public server's response check fail" << endl;
     if (m_responseHdr->dataUnitLength != sizeof (TimeForward_t))
         cout << "[WARN] Sender::readResponse(): dataUnitLength in public server's response expected to 6, actually is " << m_responseHdr->dataUnitLength << endl;

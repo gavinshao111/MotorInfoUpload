@@ -503,7 +503,12 @@ void CarData::getLocationFromDBAndUpdateStruct(const uint32_t signalCodeArray[])
     }
 }
 
-// data format expected like | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | time(8) | ... |
+/* 
+ * data format expected like 
+ * | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | time(8) |
+ * | lenghtOfSignalValue(1) | signalTypeCode(4) | signalValue(lenghtOfSignalValue) | time(8) |
+ * | ...
+ */
 
 void CarData::updateStructByMQ(int8_t* ptr, size_t length) {
     if (NULL == ptr || 1 > length)

@@ -25,7 +25,14 @@ using namespace bytebuf;
  * WORD 无符号双字节整型（字，16位）
  * DWORD 无符号四字节整型（双字，32位）
  * STRING ASCII字符码，若无数据则放一个0终结符，编码表示参见GB/T 1988中5.1所述含汉字时，
- *  采用区位码编码，占用2个字节，编码表示参见GB 18030中6所述
+ * 采用区位码编码，占用2个字节，编码表示参见GB 18030中6所述
+ * 
+ * task:
+ * 1.	补发之前的周期没上传的数据。线程B
+ * 2.	从数据库取最新的数据，生成以车机id为key的map中。线程B
+ * 3.	订阅MQ，当收到某车机数据时更新map中某车机数据，然后上传public平台。线程A
+ * 4.	当周期时间点到达时，遍历map上传全部车机数据。线程B
+ * 5.	数据发送任务：发送时先生成登录数据并发送，然后发送车机数据，然后登出，然后更新最后一次完成时间。
  */
 
 
@@ -37,7 +44,7 @@ extern const string vinForTest = "0123456789abcdefg";
 extern const string StrlastUploadTimeForTest = "2017-03-01 13:27:15";
 #endif
 
-int main(int argc, char** argv) {
+int motorInfoUpload(int argc, char** argv) {
     StaticResource staticResource;
     try {
         staticResource.PublicServerIp = "10.34.16.94";

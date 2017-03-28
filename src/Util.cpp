@@ -122,5 +122,7 @@ uint8_t Util::generateBlockCheckCharacter(const void* ptr, const size_t& size) {
 }
 
 uint8_t Util::generateBlockCheckCharacter(const bytebuf::ByteBuffer& byteBuffer, const size_t& offset, const size_t& size) {
-    return generateBlockCheckCharacter(&(byteBuffer.at(byteBuffer.position() + offset)), size);
+    if (byteBuffer.remaining() < offset + size)
+        throw runtime_error("Util::generateBlockCheckCharacter(): Illegal Argument");
+    return generateBlockCheckCharacter(byteBuffer.array() + byteBuffer.position() + offset, size);
 }

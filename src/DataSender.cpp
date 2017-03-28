@@ -217,7 +217,7 @@ void DataSender::sendData() {
     // 国标：每登入一次，登入流水号自动加1，从1开始循环累加，最大值为65531，循环周期为天。
     now = time(NULL);
     
-    cout << "[DEBUG1] now = " << Util::timeToStr(now) << endl;
+//    cout << "[DEBUG1] now = " << Util::timeToStr(now) << endl;
     
     timeTM = localtime(&now);
     int mday = timeTM->tm_mday;
