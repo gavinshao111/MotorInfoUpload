@@ -5,16 +5,13 @@
       <itemPath>src/BlockQueue.h</itemPath>
       <itemPath>src/DataFormat.h</itemPath>
       <itemPath>src/Forward/DataFormatForward.h</itemPath>
-      <itemPath>src/Forward/DataPacketForward.h</itemPath>
       <itemPath>src/Forward/Generator.h</itemPath>
       <itemPath>src/Forward/Sender.h</itemPath>
       <itemPath>src/Util.h</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles" displayName="源文件" projectFiles="true">
-      <itemPath>src/Forward/DataPacketForward.cpp</itemPath>
       <itemPath>src/Forward/Generator.cpp</itemPath>
       <itemPath>src/Forward/MotorInfoForward.cpp</itemPath>
-      <itemPath>src/Forward/Sender.cpp</itemPath>
       <itemPath>src/Util.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles" displayName="资源文件" projectFiles="true">
@@ -56,7 +53,7 @@
             <pElem>../GavinLib/GMqtt/dist</pElem>
           </linkerAddLib>
           <commandlineTool>g++</commandlineTool>
-          <commandLine>-lmysqlcppconn-static -lpthread `mysql_config --cflags --libs` -std=c++0x -lsafestrcpy -lbytebuffer -gmqtt -lgsocket</commandLine>
+          <commandLine>-std=c++0x -lbytebuffer -lgmqtt -lgsocket</commandLine>
         </linkerTool>
       </compileType>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
@@ -65,17 +62,11 @@
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/DataPacketForward.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/DataPacketForward.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/Generator.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Generator.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/MotorInfoForward.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/Sender.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -110,17 +101,11 @@
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/DataPacketForward.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/DataPacketForward.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/Generator.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Generator.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/MotorInfoForward.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/Sender.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
       </item>

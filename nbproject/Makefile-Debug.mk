@@ -35,10 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/src/Forward/DataPacketForward.o \
 	${OBJECTDIR}/src/Forward/Generator.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
-	${OBJECTDIR}/src/Forward/Sender.o \
 	${OBJECTDIR}/src/Util.o
 
 
@@ -63,12 +61,7 @@ LDLIBSOPTIONS=-L../GavinLib/ByteBuffer/dist -L../GavinLib/GSocket/dist -L../Gavi
 	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motorinfoupload
 
 motorinfoupload: ${OBJECTFILES}
-	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -lmysqlcppconn-static -lpthread `mysql_config --cflags --libs` -std=c++0x -lsafestrcpy -lbytebuffer -gmqtt -lgsocket
-
-${OBJECTDIR}/src/Forward/DataPacketForward.o: src/Forward/DataPacketForward.cpp
-	${MKDIR} -p ${OBJECTDIR}/src/Forward
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/DataPacketForward.o src/Forward/DataPacketForward.cpp
+	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgmqtt -lgsocket
 
 ${OBJECTDIR}/src/Forward/Generator.o: src/Forward/Generator.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
@@ -79,11 +72,6 @@ ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/MotorInfoForward.o src/Forward/MotorInfoForward.cpp
-
-${OBJECTDIR}/src/Forward/Sender.o: src/Forward/Sender.cpp
-	${MKDIR} -p ${OBJECTDIR}/src/Forward
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Sender.o src/Forward/Sender.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

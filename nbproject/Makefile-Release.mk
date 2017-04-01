@@ -35,10 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/src/Forward/DataPacketForward.o \
 	${OBJECTDIR}/src/Forward/Generator.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
-	${OBJECTDIR}/src/Forward/Sender.o \
 	${OBJECTDIR}/src/Util.o
 
 
@@ -66,11 +64,6 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/motorinfoupload.exe: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/src/Forward/DataPacketForward.o: src/Forward/DataPacketForward.cpp
-	${MKDIR} -p ${OBJECTDIR}/src/Forward
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/DataPacketForward.o src/Forward/DataPacketForward.cpp
-
 ${OBJECTDIR}/src/Forward/Generator.o: src/Forward/Generator.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
@@ -80,11 +73,6 @@ ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/MotorInfoForward.o src/Forward/MotorInfoForward.cpp
-
-${OBJECTDIR}/src/Forward/Sender.o: src/Forward/Sender.cpp
-	${MKDIR} -p ${OBJECTDIR}/src/Forward
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Sender.o src/Forward/Sender.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

@@ -5,28 +5,20 @@
  */
 
 /* 
- * File:   DataFormatForward.h
+ * File:   Resource.h
  * Author: 10256
  *
- * Created on 2017年3月8日, 下午7:53
+ * Created on 2017年3月29日, 下午7:55
  */
 
-#ifndef DATAFORMATFORWARD_H
-#define DATAFORMATFORWARD_H
+#ifndef RESOURCE_H
+#define RESOURCE_H
 
-#include <string>
-#include <boost/shared_ptr.hpp>
+#include <bits/shared_ptr.h>
+#include "DataFormatForward.h"
 #include "DataPacketForward.h"
 #include "GSocketClient.h"
 #include "../BlockQueue.h"
-namespace responseflag {
-
-    typedef enum {
-        success = 1,
-        error = 2,
-        vinrepeat = 3,
-    } enumResponseFlag;
-}
 
 typedef struct {
     std::string PublicServerIp;
@@ -34,14 +26,10 @@ typedef struct {
     std::string PublicServerUserName;
     std::string PublicServerPassword;
     std::string MQServerUrl;
-    std::string MQTopicForCarData;
-    std::string MQTopicForResponseData;
-    
+    std::string MQTopic;
     std::string MQClientID;
     std::string MQServerUserName;
     std::string MQServerPassword;
-    std::string pathOfPrivateKey;
-    std::string pathOfServerPublicKey;
 
     /*
      * 等待公共平台回应超时（ReadResponseTimeOut），
@@ -66,7 +54,7 @@ typedef struct {
     size_t MaxSendCarDataTimes;
 
     enumEncryptionAlgorithm EncryptionAlgorithm;
-    
+    std::shared_ptr<blockqueue::BlockQueue<DataPacketForward*>> dataQueue;
 //    blockqueue::BlockQueue<DataPacketForward*>* dataQueue;
 
     /* 平台登入登出的唯一识别号，
@@ -74,44 +62,11 @@ typedef struct {
      */
     std::string PaltformId;
     size_t ReSetupPeroid; // tcp 中断后每隔几秒重连
-    
+    std::shared_ptr<gavinsocket::GSocketClient> tcpConnection;
 //    gavinsocket::GSocketClient* tcpConnection;
     size_t MaxSerialNumber;
 
 } StaticResourceForward;
 
-#pragma pack(1)
-
-typedef struct TimeForward {
-    uint8_t year;
-    uint8_t mon;
-    uint8_t mday;
-    uint8_t hour;
-    uint8_t min;
-    uint8_t sec;
-} TimeForward_t;
-
-typedef struct LoginDataForward {
-    // 登入登出流水号 may be we should store it in DB.
-    DataPacketHeader_t header;
-    TimeForward_t time;
-    uint16_t serialNumber;
-    uint8_t username[12];
-    uint8_t password[20];
-    uint8_t encryptionAlgorithm; // header 也有这个字段，重复
-    uint8_t checkCode;
-} LoginDataForward_t;
-
-typedef struct LogoutDataForward {
-    DataPacketHeader_t header;
-    TimeForward_t time;
-    uint16_t serialNumber;
-    uint8_t checkCode;
-} LogoutDataForward_t;
-#pragma pack()
-
-typedef blockqueue::BlockQueue<boost::shared_ptr<bytebuf::ByteBuffer>> DataQueue_t;
-typedef gavinsocket::GSocketClient TcpConn_t;
-
-#endif /* DATAFORMATFORWARD_H */
+#endif /* RESOURCE_H */
 

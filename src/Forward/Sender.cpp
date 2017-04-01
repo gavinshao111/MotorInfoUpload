@@ -25,16 +25,18 @@ using namespace gavinsocket;
 
 extern bool exitNow;
 
-Sender::Sender(StaticResourceForward* staticResource) :
-m_staticResource(staticResource),
+Sender::Sender(StaticResourceForward& staticResource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection) :
+s_staticResource(staticResource),
+s_carDataQueue(CarDataQueue),
+s_responseDataQueue(ResponseDataQueue),
+s_tcpConn(tcpConnection),
 m_serialNumber(1),
 m_reissueNum(0),
 m_lastloginTime(0),
 m_lastSendTime(0),
 m_setupTcpInitial(true),
 m_senderStatus(senderstatus::EnumSenderStatus::ok),
-m_responseHdr(NULL),
-m_carData(NULL) {
+m_responseHdr(NULL) {
     if (m_staticResource->PublicServerUserName.length() != sizeof (m_loginData.username)
             || sizeof (m_loginData.password) != (m_staticResource->PublicServerPassword.length()))
         throw runtime_error("DataSender(): PublicServerUserName or PublicServerPassword Illegal");
@@ -61,11 +63,11 @@ m_carData(NULL) {
     ofstream file;
     file.open("log/message.txt", ofstream::out | ofstream::trunc | ofstream::binary);
     // 输出到日志 vin - collect time - send time - data(decimal)
-    file << setiosflags(ios::left) 
-            << setw(21) << setfill(' ') << "vin" 
-            << setw(23) << setfill(' ') << "collect_time" 
-            << setw(23) << setfill(' ') << "send_time" 
-            << "data\n" 
+    file << setiosflags(ios::left)
+            << setw(21) << setfill(' ') << "vin"
+            << setw(23) << setfill(' ') << "collect_time"
+            << setw(23) << setfill(' ') << "send_time"
+            << "data\n"
             << endl;
     file.close();
 }
@@ -89,9 +91,9 @@ void Sender::run() {
 
         //        DataPacketForward* carData;
         for (; !exitNow;) {
-            if (NULL == m_carData) {
+            if (!m_carData.get()) {
                 m_carData = m_staticResource->dataQueue->take();
-                if (NULL == m_carData || !m_carData->m_dataBuf->hasRemaining()) {
+                if (!m_carData->hasRemaining()) {
                     delete m_carData;
                     m_carData = NULL;
                     cout << "Sender::run(): take an empty realtimeData" << endl;
@@ -355,7 +357,7 @@ void Sender::tcpSendData(const enumCmdCode & cmd) {
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);
         cout << "Sender::tcpSendData(): " << sizeToSend << " bytes sent." << endl;
-        
+
         ofstream file;
         file.open("log/message.txt", ofstream::out | ofstream::app | ofstream::binary);
         outputMsg(file, vin, collectTime, m_lastSendTime, dataToSend);

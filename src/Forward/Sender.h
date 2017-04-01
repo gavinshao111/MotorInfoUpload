@@ -16,7 +16,7 @@
 
 #include <sstream>
 #include <fstream>
-#include "DataPacketForward.h"
+//#include "DataPacketForward.h"
 #include "../DataFormat.h"
 #include "DataFormatForward.h"
 #include "ByteBuffer.h"
@@ -56,7 +56,7 @@ namespace senderstatus {
 
 class Sender {
 public:
-    Sender(StaticResourceForward* staticResource);
+    Sender(StaticResourceForward& staticResource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection);
     Sender(const Sender& orig);
     virtual ~Sender();
 
@@ -65,10 +65,14 @@ public:
 private:
     size_t m_reissueNum;
 //    PacketForwardInfo m_packetForwardInfo;
-    StaticResourceForward* m_staticResource;
+    StaticResourceForward& s_staticResource;
+    DataQueue_t& s_carDataQueue;
+    DataQueue_t& s_responseDataQueue;
+    TcpConn_t& s_tcpConn;
     LoginDataForward_t m_loginData;
     LogoutDataForward_t m_logoutData;
-    DataPacketForward* m_carData;
+//    DataPacketForward* m_carData;
+    boost::shared_ptr<bytebuf::ByteBuffer> m_carData;
 
     uint16_t m_serialNumber;
     bool m_setupTcpInitial;

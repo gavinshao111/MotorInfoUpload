@@ -19,11 +19,11 @@
 
 class DataPacketForward {
 public:
-    bytebuf::ByteBuffer* m_dataBuf;
+    bytebuf::ByteBuffer m_dataBuf;
     std::string m_vin;
     
     DataPacketForward(const std::string& vin, const size_t& length);
-    DataPacketForward(const DataPacketForward& orig);
+//    DataPacketForward(const DataPacketForward& orig);
     virtual ~DataPacketForward();
     
     time_t getCollectTime() const;

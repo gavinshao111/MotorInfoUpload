@@ -18,15 +18,15 @@
 using namespace bytebuf;
 using namespace std;
 
-DataPacketForward::DataPacketForward(const string& vin, const size_t& length) : m_vin(vin) {
-    m_dataBuf = ByteBuffer::allocate(length);
+DataPacketForward::DataPacketForward(const string& vin, const size_t& length)
+: m_vin(vin),
+m_dataBuf(length) {
 }
 
-DataPacketForward::DataPacketForward(const DataPacketForward& orig) {
-}
+//DataPacketForward::DataPacketForward(const DataPacketForward& orig) {
+//}
 
 DataPacketForward::~DataPacketForward() {
-    m_dataBuf->freeMemery();
 }
 
 void DataPacketForward::setReissue() {
