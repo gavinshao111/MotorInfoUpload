@@ -28,6 +28,10 @@ namespace blockqueue {
 
     template <class DataT>
     class BlockQueue {
+        // we should use refrence instead of copy
+        BlockQueue(const BlockQueue& orig) {
+        }
+
         std::list<DataT> m_queue;
 #if UseBoostMutex
         boost::mutex m_mutex;
@@ -42,10 +46,6 @@ namespace blockqueue {
     public:
 
         BlockQueue(size_t capacity) : m_capacity(capacity)  {
-        }
-
-        BlockQueue(const BlockQueue& orig) {
-            clearAndFreeElements();
         }
 
         virtual ~BlockQueue() {
@@ -97,17 +97,18 @@ namespace blockqueue {
             return m_capacity;
         }
         
-        void clearAndFreeElements() {
+        void clear() {
 #if UseBoostMutex
             boost::unique_lock<boost::mutex> lk(m_mutex);
 #else
             std::unique_lock<std::mutex> lk(m_mutex);
 #endif
-            typename std::list<DataT>::iterator it = m_queue.begin();
-            for (; it != m_queue.end();) {
-                delete *it;
-                it = m_queue.erase(it);
-            }
+            m_queue.clear();
+//            typename std::list<DataT>::iterator it = m_queue.begin();
+//            for (; it != m_queue.end();) {
+//                delete *it;
+//                it = m_queue.erase(it);
+//            }
         }
     };
 }

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configurationDescriptor version="100">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
-    <logicalFolder name="HeaderFiles" displayName="头文件" projectFiles="true">
+    <logicalFolder name="Forward" displayName="Forward" projectFiles="true">
       <itemPath>src/BlockQueue.h</itemPath>
       <itemPath>src/DataFormat.h</itemPath>
       <itemPath>src/Forward/DataFormatForward.h</itemPath>
-      <itemPath>src/Forward/Generator.h</itemPath>
-      <itemPath>src/Forward/Sender.h</itemPath>
-      <itemPath>src/Util.h</itemPath>
-    </logicalFolder>
-    <logicalFolder name="SourceFiles" displayName="源文件" projectFiles="true">
       <itemPath>src/Forward/Generator.cpp</itemPath>
+      <itemPath>src/Forward/Generator.h</itemPath>
       <itemPath>src/Forward/MotorInfoForward.cpp</itemPath>
+      <itemPath>src/Forward/Resource.h</itemPath>
+      <itemPath>src/Forward/Sender.cpp</itemPath>
+      <itemPath>src/Forward/Sender.h</itemPath>
       <itemPath>src/Util.cpp</itemPath>
+      <itemPath>src/Util.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles" displayName="资源文件" projectFiles="true">
     </logicalFolder>
@@ -28,6 +28,9 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
+  <sourceRootList>
+    <Elem>src/Forward</Elem>
+  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="Debug" type="1">
@@ -43,7 +46,7 @@
             <pElem>../GavinLib/GSocket/src</pElem>
             <pElem>../GavinLib/GMqtt/src</pElem>
           </incDir>
-          <commandLine>-std=c++0x</commandLine>
+          <commandLine>-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0</commandLine>
         </ccTool>
         <linkerTool>
           <output>motorinfoupload</output>
@@ -53,7 +56,7 @@
             <pElem>../GavinLib/GMqtt/dist</pElem>
           </linkerAddLib>
           <commandlineTool>g++</commandlineTool>
-          <commandLine>-std=c++0x -lbytebuffer -lgmqtt -lgsocket</commandLine>
+          <commandLine>-std=c++0x -lbytebuffer -lgmqtt -lgsocket -lboost_thread -lboost_system</commandLine>
         </linkerTool>
       </compileType>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
@@ -67,6 +70,10 @@
       <item path="src/Forward/Generator.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/MotorInfoForward.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/Resource.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/Sender.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -106,6 +113,10 @@
       <item path="src/Forward/Generator.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/MotorInfoForward.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/Resource.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/Sender.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
       </item>

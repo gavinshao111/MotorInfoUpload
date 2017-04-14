@@ -52,8 +52,10 @@ typedef enum {
 } enumEncryptionAlgorithm;
 
 typedef enum {
-    carSignalDataUpload = 2,
+    vehicleLogin = 1,
+    vehicleSignalDataUpload = 2,
     reissueUpload = 3,
+    vehicleLogout = 4,
     platformLogin = 5,
     platformLogout = 6,
 } enumCmdCode;
@@ -93,12 +95,12 @@ DataUnit: 6+1+20+1+13+1+9+1+14+1+5=72
 
 typedef struct DataPacketHeader {
     uint8_t startCode[2];
-    uint8_t CmdId;
+    uint8_t cmdId;
     uint8_t responseFlag;
     uint8_t vin[VINLEN];
     uint8_t encryptionAlgorithm;
     uint16_t dataUnitLength;
-    
+
     DataPacketHeader() {
         startCode[0] = '#';
         startCode[1] = '#';
@@ -109,7 +111,7 @@ typedef struct DataPacketHeader {
 
 typedef struct LoginData {
     // 登入登出流水号 may be we should store it in DB.
-    
+
     uint8_t year;
     uint8_t mon;
     uint8_t mday;
@@ -119,7 +121,7 @@ typedef struct LoginData {
     uint16_t serialNumber;
     uint8_t username[12];
     uint8_t password[20];
-    uint8_t encryptionAlgorithm;    // header 也有这个字段，重复
+    uint8_t encryptionAlgorithm; // header 也有这个字段，重复
 
 } LoginData_t;
 
@@ -247,7 +249,7 @@ typedef struct {
 
     enumEncryptionAlgorithm EncryptionAlgorithm;
 
-//    sql::Driver* DBDriver;
+    //    sql::Driver* DBDriver;
 
     CarDataMap carDataMap;
     blockqueue::BlockQueue<DataPtrLen*>* dataQueue;

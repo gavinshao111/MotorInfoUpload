@@ -28,11 +28,11 @@ public:
     gmqtt::GMqttClient m_MQClient;
     
     Generator(StaticResourceForward& staticResource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection);
-    Generator(const Generator& orig);
     virtual ~Generator();
     
     void run();
 private:
+    Generator(const Generator& orig);
     void msgArrvdHandler(const std::string& topic, bytebuf::ByteBuffer& payload);
     void subscribeMq();
     std::stringstream m_stream;

@@ -37,6 +37,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/src/Forward/Generator.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
+	${OBJECTDIR}/src/Forward/Sender.o \
 	${OBJECTDIR}/src/Util.o
 
 
@@ -44,8 +45,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-std=c++0x
-CXXFLAGS=-std=c++0x
+CCFLAGS=-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0
+CXXFLAGS=-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -61,7 +62,7 @@ LDLIBSOPTIONS=-L../GavinLib/ByteBuffer/dist -L../GavinLib/GSocket/dist -L../Gavi
 	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motorinfoupload
 
 motorinfoupload: ${OBJECTFILES}
-	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgmqtt -lgsocket
+	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgmqtt -lgsocket -lboost_thread -lboost_system
 
 ${OBJECTDIR}/src/Forward/Generator.o: src/Forward/Generator.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
@@ -72,6 +73,11 @@ ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/MotorInfoForward.o src/Forward/MotorInfoForward.cpp
+
+${OBJECTDIR}/src/Forward/Sender.o: src/Forward/Sender.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Sender.o src/Forward/Sender.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

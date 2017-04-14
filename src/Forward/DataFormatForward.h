@@ -34,8 +34,8 @@ typedef struct {
     std::string PublicServerUserName;
     std::string PublicServerPassword;
     std::string MQServerUrl;
-    std::string MQTopicForCarData;
-    std::string MQTopicForResponseData;
+    std::string MQTopicForUpload;
+    std::string MQTopicForResponse;
     
     std::string MQClientID;
     std::string MQServerUserName;
@@ -48,7 +48,7 @@ typedef struct {
      */
     size_t ReadResponseTimeOut;
     /* 
-     * 登录没有回应每隔1min（LoginTimeout）重新发送登入数据。
+     * 登入没有回应每隔1min（LoginTimeout）重新发送登入数据。
      * 3（LoginTimes）次登入没有回应，每隔30min（loginTimeout2）重新发送登入数据。
      */
     size_t LoginIntervals;
@@ -56,14 +56,14 @@ typedef struct {
     size_t LoginTimes;
     /*
      * 校验失败：
-     * 国标：重发本条实时信息（应该是调整后重发）。每隔1min（CarDataResendIntervals）重发，最多发送3(MaxSendCarDataTimes)次
-     * 国标2：如客户端平台收到应答错误，应及时与服务端平台进行沟通，对登入信息进行调整。
-     * 由于无法做到实时调整，只能忽略错误的那条实时信息，继续发下一条。
+     *  国标：重发本条实时信息（应该是调整后重发）。每隔1min（CarDataResendIntervals）重发，最多发送3(MaxSendCarDataTimes)次
+     *  国标2：如客户端平台收到应答错误，应及时与服务端平台进行沟通，对登入信息进行调整。
+     *  由于平台无法做到实时调整，只能转发错误回应给车机，继续发下一条。所以不再重发本条实时信息，等车机调整后直接转发。
      * 未响应：
-     * 国标2：如客户端平台未收到应答，平台重新登入
+     *  国标2：如客户端平台未收到应答，平台重新登入
      */
-    size_t CarDataResendIntervals;
-    size_t MaxSendCarDataTimes;
+//    size_t CarDataResendIntervals;
+//    size_t MaxSendCarDataTimes;
 
     enumEncryptionAlgorithm EncryptionAlgorithm;
     
@@ -110,7 +110,8 @@ typedef struct LogoutDataForward {
 } LogoutDataForward_t;
 #pragma pack()
 
-typedef blockqueue::BlockQueue<boost::shared_ptr<bytebuf::ByteBuffer>> DataQueue_t;
+typedef boost::shared_ptr<bytebuf::ByteBuffer> BytebufSPtr_t;
+typedef blockqueue::BlockQueue<BytebufSPtr_t> DataQueue_t;
 typedef gavinsocket::GSocketClient TcpConn_t;
 
 #endif /* DATAFORMATFORWARD_H */

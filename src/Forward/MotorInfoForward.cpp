@@ -1,13 +1,9 @@
-#define UseBoostMutex true
-#define CarCompliance true
-
 #include <cstdlib>
 #include <iostream>
 #include <boost/thread.hpp>
 
 #include"DataFormatForward.h"
 //#include "../BlockQueue.h"
-//#include "DataPacketForward.h"
 #include "../DataFormat.h"
 #include "Sender.h"
 #include "Generator.h"
@@ -28,24 +24,26 @@
  * 企业平台需要转发上级平台发来的车辆登录反馈给车机
  */
 
-void senderTask(StaticResourceForward& resource, DataQueue_t& dataQueue, TcpConn_t& tcpConnection);
-void generatorTask(StaticResourceForward& resource, DataQueue_t& dataQueue, TcpConn_t& tcpConnection);
+void senderTask(StaticResourceForward& resource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection);
+void generatorTask(StaticResourceForward& resource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection);
 void StaticResourceInit(StaticResourceForward& resource);
 
-bool exitNow = false;
 int main(int argc, char** argv) {
     try {
-        //        google::InitGoogleLogging(argv[0]);
-        //        FLAGS_log_dir = "./log";
-
         StaticResourceForward resource;
         StaticResourceInit(resource);
         DataQueue_t CarDataQueue(1024);
         DataQueue_t ResponseDataQueue(1024);
-        TcpConn_t tcpConnection((resource.PublicServerIp, resource.PublicServerPort));
+        TcpConn_t tcpConnection(resource.PublicServerIp, resource.PublicServerPort);
 
-        boost::thread SenderThread(senderTask, resource, CarDataQueue, ResponseDataQueue, tcpConnection);
-        boost::thread GeneratorThread(generatorTask, resource, CarDataQueue, ResponseDataQueue, tcpConnection);
+        boost::thread SenderThread(senderTask, boost::ref<StaticResourceForward>(resource), 
+                boost::ref<DataQueue_t>(CarDataQueue), 
+                boost::ref<DataQueue_t>(ResponseDataQueue), 
+                boost::ref<TcpConn_t>(tcpConnection));
+        boost::thread GeneratorThread(generatorTask, boost::ref<StaticResourceForward>(resource), 
+                boost::ref<DataQueue_t>(CarDataQueue), 
+                boost::ref<DataQueue_t>(ResponseDataQueue), 
+                boost::ref<TcpConn_t>(tcpConnection));
 
         for (; std::cin.get() != 'q';);
         SenderThread.interrupt();
@@ -53,15 +51,12 @@ int main(int argc, char** argv) {
         
         SenderThread.join();
         GeneratorThread.join();
-
-        //        deleteStaticResource();
     } catch (std::exception &e) {
         std::cout << "ERROR: Exception in " << __FILE__;
         std::cout << " (" << __func__ << ") on line " << __LINE__ << std::endl;
         std::cout << "ERROR: " << e.what() << std::endl;
     }
     std::cout << "done." << std::endl;
-    //    google::ShutdownGoogleLogging();
 
     return 0;
 }
@@ -112,8 +107,9 @@ void StaticResourceInit(StaticResourceForward& resource) {
     resource.PublicServerPassword = "12345678901234567890";
     resource.EncryptionAlgorithm = enumEncryptionAlgorithm::null;
     resource.MQServerUrl = "tcp://120.26.86.124:1883";
-    resource.MQTopicForCarData = "/+/lpcloud/candata/gbt32960/upload";
-    resource.MQTopicForResponseData = "/+/lpcloud/candata/gbt32960/response";
+    resource.MQTopicForUpload = "/+/lpcloud/candata/gbt32960/upload";
+    // topic format: /carid/lpcloud/candata/gbt32960/response
+    resource.MQTopicForResponse = "/lpcloud/candata/gbt32960/response";
 //    resource.MQTopicRegexForCarData = "^/[a-zA-Z0-9]{17}/lpcloud/candata/gbt32960/upload$";
 //    resource.MQTopicRegexForResponseData = "^/[a-zA-Z0-9]{17}/lpcloud/candata/gbt32960/response$";
     
@@ -131,9 +127,8 @@ void StaticResourceInit(StaticResourceForward& resource) {
     resource.LoginTimes = 3;
     resource.LoginIntervals = 60;
     resource.LoginIntervals2 = 1800;
-    resource.CarDataResendIntervals = 60;
+//    resource.CarDataResendIntervals = 60;
     //    resource.MaxSendCarDataTimes = 3;
-    resource.CarDataResendIntervals = 60;
     //    resource.dataQueue = new BlockQueue<DataPacketForward*>(100);
 //    resource.dataQueue = boost::make_shared<BlockQueue < DataPacketForward*>>(100);
 
@@ -144,8 +139,3 @@ void StaticResourceInit(StaticResourceForward& resource) {
 //    resource.tcpConnection = boost::make_shared<GSocketClient>(resource.PublicServerIp, resource.PublicServerPort);
     resource.MaxSerialNumber = 65531;
 }
-
-//void deleteStaticResource() {
-//    delete staticResourceForward.dataQueue;
-//    delete staticResourceForward.tcpConnection;
-//}
