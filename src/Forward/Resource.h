@@ -8,35 +8,155 @@
  * File:   Resource.h
  * Author: 10256
  *
- * Created on 2017年3月29日, 下午7:55
+ * Created on 2017年5月16日, 下午3:37
  */
 
 #ifndef RESOURCE_H
 #define RESOURCE_H
 
-#include <bits/shared_ptr.h>
-#include "DataFormatForward.h"
-#include "DataPacketForward.h"
-#include "GSocketClient.h"
+#include <string>
+#include <map>
+#include <mutex>
+#include <boost/asio.hpp>
 #include "../BlockQueue.h"
+#include "GSocket.h"
+#include "DataFormatForward.h"
+#include "TcpConnWithVehicle.h"
 
-typedef struct {
+class Resource {
+public:
+    static Resource* GetResource();
+    virtual ~Resource();
+
+    gsocket::GSocket& GetTcpConnWithPublicPlatform() {
+        return TcpConnWithPublicPlatform;
+    }
+
+    blockqueue::BlockQueue<BytebufSPtr_t>& GetVehicleDataQueue() {
+        return VehicleDataQueue;
+    }
+
+    const size_t& GetMaxSerialNumber() const {
+        return MaxSerialNumber;
+    }
+
+    const size_t& GetReSetupPeroid() const {
+        return ReSetupPeroid;
+    }
+
+    const std::string& GetPaltformId() const {
+        return PaltformId;
+    }
+
+    const enumEncryptionAlgorithm& GetEncryptionAlgorithm() const {
+        return EncryptionAlgorithm;
+    }
+
+    const size_t& GetLoginTimes() const {
+        return LoginTimes;
+    }
+
+    const size_t& GetLoginIntervals2() const {
+        return LoginIntervals2;
+    }
+
+    const size_t& GetLoginIntervals() const {
+        return LoginIntervals;
+    }
+
+    const size_t& GetReadResponseTimeOut() const {
+        return ReadResponseTimeOut;
+    }
+
+    const std::string& GetPathOfServerPublicKey() const {
+        return pathOfServerPublicKey;
+    }
+
+    const std::string& GetPathOfPrivateKey() const {
+        return pathOfPrivateKey;
+    }
+
+    const std::string& GetMQServerPassword() const {
+        return MQServerPassword;
+    }
+
+    const std::string& GetMQServerUserName() const {
+        return MQServerUserName;
+    }
+
+    const std::string& GetMQClientID() const {
+        return MQClientID;
+    }
+
+    const std::string& GetMQTopicForResponse() const {
+        return MQTopicForResponse;
+    }
+
+    const std::string& GetMQServerUrl() const {
+        return MQServerUrl;
+    }
+
+    const int& GetThePlatformTcpServicePort() const {
+        return ThePlatformTcpServicePort;
+    }
+
+    const std::string& GetPublicServerPassword() const {
+        return PublicServerPassword;
+    }
+
+    const std::string& GetPublicServerUserName() const {
+        return PublicServerUserName;
+    }
+
+    const int& GetPublicServerPort() const {
+        return PublicServerPort;
+    }
+
+    const std::string& GetPublicServerIp() const {
+        return PublicServerIp;
+    }
+    
+    typedef std::map<std::string, SessionRef_t> ConnTable_t;
+    
+    ConnTable_t& GetVechicleConnTable() {
+        return VechicleConnTable;
+    }
+
+    std::mutex& GetTableMutex() {
+        return MtxForTable;
+    }
+
+    size_t GetHeartBeatCycle() const {
+        return HeartBeatCycle;
+    }
+
+private:
+    Resource();
+    
+    static Resource* s_resource;
+    
     std::string PublicServerIp;
     int PublicServerPort;
     std::string PublicServerUserName;
     std::string PublicServerPassword;
+
+    int ThePlatformTcpServicePort;
     std::string MQServerUrl;
-    std::string MQTopic;
+//    std::string MQTopicForUpload;
+    std::string MQTopicForResponse;
+
     std::string MQClientID;
     std::string MQServerUserName;
     std::string MQServerPassword;
+    std::string pathOfPrivateKey;
+    std::string pathOfServerPublicKey;
 
     /*
      * 等待公共平台回应超时（ReadResponseTimeOut），
      */
     size_t ReadResponseTimeOut;
     /* 
-     * 登录没有回应每隔1min（LoginTimeout）重新发送登入数据。
+     * 登入没有回应每隔1min（LoginTimeout）重新发送登入数据。
      * 3（LoginTimes）次登入没有回应，每隔30min（loginTimeout2）重新发送登入数据。
      */
     size_t LoginIntervals;
@@ -44,29 +164,36 @@ typedef struct {
     size_t LoginTimes;
     /*
      * 校验失败：
-     * 国标：重发本条实时信息（应该是调整后重发）。每隔1min（CarDataResendIntervals）重发，最多发送3(MaxSendCarDataTimes)次
-     * 国标2：如客户端平台收到应答错误，应及时与服务端平台进行沟通，对登入信息进行调整。
-     * 由于无法做到实时调整，只能忽略错误的那条实时信息，继续发下一条。
+     *  国标：重发本条实时信息（应该是调整后重发）。每隔1min（CarDataResendIntervals）重发，最多发送3(MaxSendCarDataTimes)次
+     *  国标2：如客户端平台收到应答错误，应及时与服务端平台进行沟通，对登入信息进行调整。
+     *  由于平台无法做到实时调整，只能转发错误回应给车机，继续发下一条。所以不再重发本条实时信息，等车机调整后直接转发。
      * 未响应：
-     * 国标2：如客户端平台未收到应答，平台重新登入
+     *  国标2：如客户端平台未收到应答，平台重新登入
      */
-    size_t CarDataResendIntervals;
-    size_t MaxSendCarDataTimes;
+    //    size_t CarDataResendIntervals;
+    //    size_t MaxSendCarDataTimes;
 
     enumEncryptionAlgorithm EncryptionAlgorithm;
-    std::shared_ptr<blockqueue::BlockQueue<DataPacketForward*>> dataQueue;
-//    blockqueue::BlockQueue<DataPacketForward*>* dataQueue;
+
+    //    blockqueue::BlockQueue<DataPacketForward*>* dataQueue;
 
     /* 平台登入登出的唯一识别号，
      * 城市邮政编码 + VIN前三位（地方平台使用GOV）+ 两位自定义数据 + "000000"
      */
     std::string PaltformId;
     size_t ReSetupPeroid; // tcp 中断后每隔几秒重连
-    std::shared_ptr<gavinsocket::GSocketClient> tcpConnection;
-//    gavinsocket::GSocketClient* tcpConnection;
-    size_t MaxSerialNumber;
 
-} StaticResourceForward;
+    //    gavinsocket::GSocketClient* tcpConnection;
+    size_t MaxSerialNumber;    
+
+    blockqueue::BlockQueue<BytebufSPtr_t> VehicleDataQueue;
+    gsocket::GSocket TcpConnWithPublicPlatform;
+    
+    ConnTable_t VechicleConnTable;
+    std::mutex MtxForTable;
+    
+    size_t HeartBeatCycle;  // 车机与我平台的默认心跳周期
+};
 
 #endif /* RESOURCE_H */
 

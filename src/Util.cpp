@@ -22,9 +22,12 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <stdexcept>
+#include <iostream>
 #include "DataFormat.h"
 
 using namespace std;
+
+string Util::s_nowtimeStr = "";
 
 Util::Util() {
 }
@@ -83,7 +86,7 @@ int Util::setupConnectionToTCPServer(const string& ip, const int& port, const bo
 string Util::timeToStr(const time_t& time) {
     struct tm* timeTM;
     char strTime[22] = {0};
-    
+
     timeTM = localtime(&time);
     strftime(strTime, sizeof (strTime) - 1, TIMEFORMAT, timeTM);
     string timeStr(strTime);
@@ -96,14 +99,14 @@ string Util::nowTimeStr() {
 
 void Util::sendByTcp(const int& fd, const void* ptr, const size_t& size) {
     size_t sentNum = 0;
-    uint8_t* _ptr = (uint8_t*)ptr;
+    uint8_t* _ptr = (uint8_t*) ptr;
     size_t tmp;
     for (; sentNum < size;) {
         tmp = write(fd, _ptr + sentNum, size - sentNum);
         if (tmp == -1) {
             close(fd);
             char errMsg[256] = "";
-            snprintf(errMsg, sizeof(errMsg) - 1, "DataSender::tcpSendData(): write to TCP server return -1. %d bytes sent", sentNum);
+            snprintf(errMsg, sizeof (errMsg) - 1, "DataSender::tcpSendData(): write to TCP server return -1. %d bytes sent", sentNum);
             throw runtime_error(errMsg);
         }
         sentNum += tmp;
@@ -111,11 +114,11 @@ void Util::sendByTcp(const int& fd, const void* ptr, const size_t& size) {
 }
 
 uint8_t Util::generateBlockCheckCharacter(const void* ptr, const size_t& size) {
-    if (NULL == ptr || 1 > size )
+    if (NULL == ptr || 1 > size)
         throw runtime_error("Util::generateBlockCheckCharacter(): Illegal source");
 
     uint8_t checkCode = 0;
-    uint8_t* _ptr = (uint8_t*)ptr;
+    uint8_t* _ptr = (uint8_t*) ptr;
     for (size_t i = 0; i < size; i++)
         checkCode ^= _ptr[i];
     return checkCode;
@@ -125,4 +128,26 @@ uint8_t Util::generateBlockCheckCharacter(const bytebuf::ByteBuffer& byteBuffer,
     if (byteBuffer.remaining() < offset + size)
         throw runtime_error("Util::generateBlockCheckCharacter(): Illegal Argument");
     return generateBlockCheckCharacter(byteBuffer.array() + byteBuffer.position() + offset, size);
+}
+
+void Util::output(const string& id, const string& message) {
+    output(id, message, "");
+}
+void Util::output(const string& id, const string& message1, const string& message2) {
+    output(id, message1, message2, "");
+}
+void Util::output(const string& id, const string& message1, const string& message2, const string& message3) {
+    output(id, message1, message2, message3, "");
+}
+void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4) {
+    output(id, message1, message2, message3, message4, "");
+}
+void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4, const string& message5) {
+    cout << "[" << id << "] " << message1 << message2 << message3 << message4 << message5 << " " << nowtimeStr() << endl;
+}
+
+const string& Util::nowtimeStr() {
+    time_t now = time(NULL);
+    s_nowtimeStr.assign(asctime(localtime(&now)));
+    return s_nowtimeStr;
 }

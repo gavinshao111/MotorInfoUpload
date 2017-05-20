@@ -3,14 +3,16 @@
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="Forward" displayName="Forward" projectFiles="true">
       <itemPath>src/BlockQueue.h</itemPath>
-      <itemPath>src/DataFormat.h</itemPath>
       <itemPath>src/Forward/DataFormatForward.h</itemPath>
-      <itemPath>src/Forward/Generator.cpp</itemPath>
-      <itemPath>src/Forward/Generator.h</itemPath>
       <itemPath>src/Forward/MotorInfoForward.cpp</itemPath>
+      <itemPath>src/Forward/Resource.cpp</itemPath>
       <itemPath>src/Forward/Resource.h</itemPath>
       <itemPath>src/Forward/Sender.cpp</itemPath>
       <itemPath>src/Forward/Sender.h</itemPath>
+      <itemPath>src/Forward/TcpConnWithVehicle.cpp</itemPath>
+      <itemPath>src/Forward/TcpConnWithVehicle.h</itemPath>
+      <itemPath>src/Forward/TcpServer.cpp</itemPath>
+      <itemPath>src/Forward/TcpServer.h</itemPath>
       <itemPath>src/Util.cpp</itemPath>
       <itemPath>src/Util.h</itemPath>
     </logicalFolder>
@@ -61,21 +63,25 @@
       </compileType>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/DataFormat.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/Generator.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/Generator.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/MotorInfoForward.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/Resource.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Resource.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/Sender.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpConnWithVehicle.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpConnWithVehicle.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpServer.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpServer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -104,21 +110,25 @@
       </compileType>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/DataFormat.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/Generator.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/Generator.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/MotorInfoForward.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/Resource.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Resource.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/Sender.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpConnWithVehicle.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpConnWithVehicle.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpServer.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpServer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.cpp" ex="false" tool="1" flavor2="0">
       </item>

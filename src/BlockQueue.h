@@ -20,7 +20,6 @@
 #include <condition_variable>
 #endif
 #include <iostream>
-#include "DataFormat.h"
 
 #ifndef BLOCKQUEUE_H
 #define BLOCKQUEUE_H

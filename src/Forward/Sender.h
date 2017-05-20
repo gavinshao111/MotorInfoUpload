@@ -16,8 +16,9 @@
 
 #include <sstream>
 #include <fstream>
-#include "../DataFormat.h"
 #include "DataFormatForward.h"
+#include "../BlockQueue.h"
+#include "GSocket.h"
 #include "ByteBuffer.h"
 
 namespace senderstatus {
@@ -35,7 +36,7 @@ namespace senderstatus {
 
 class Sender {
 public:
-    Sender(StaticResourceForward& staticResource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection);
+    Sender();
     virtual ~Sender();
     void run();
     void runForCarCompliance();
@@ -54,16 +55,12 @@ private:
     void logout();
     void static outputMsg(std::ostream& out, const std::string& vin, const time_t& collectTime, const time_t& sendTime, const bytebuf::ByteBuffer* data = NULL);
 
-    size_t m_reissueNum;
-    StaticResourceForward& s_staticResource;
-    DataQueue_t& s_carDataQueue;
-    DataQueue_t& s_responseDataQueue;
-    TcpConn_t& s_tcpConn;
+    blockqueue::BlockQueue<BytebufSPtr_t>&  s_carDataQueue;
+    gsocket::GSocket& s_tcpConn;
     LoginDataForward_t m_loginData;
     LogoutDataForward_t m_logoutData;
     boost::shared_ptr<bytebuf::ByteBuffer> m_carData;
     uint16_t m_serialNumber;
-    bool m_setupTcpInitial;
     time_t m_lastloginTime;
     time_t m_lastSendTime;
     boost::shared_ptr<bytebuf::ByteBuffer> m_responseBuf;

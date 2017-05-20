@@ -16,41 +16,40 @@
 #include <iomanip>
 #include <string.h>
 #include <boost/smart_ptr/make_shared_object.hpp>
+#include <bits/stl_map.h>
+#include <bits/stl_pair.h>
+#include <bits/basic_string.h>
 #include "ByteBuffer.h"
 #include "../Util.h"
 #include "GSocket.h"
+#include "Resource.h"
 
 using namespace bytebuf;
 using namespace std;
-using namespace gavinsocket;
+using namespace gsocket;
 
-Sender::Sender(StaticResourceForward& staticResource, DataQueue_t& CarDataQueue, DataQueue_t& ResponseDataQueue, TcpConn_t& tcpConnection) :
-s_staticResource(staticResource),
-s_carDataQueue(CarDataQueue),
-s_responseDataQueue(ResponseDataQueue),
-s_tcpConn(tcpConnection),
+Sender::Sender() :
 m_serialNumber(1),
-m_reissueNum(0),
 m_lastloginTime(0),
 m_lastSendTime(0),
-m_setupTcpInitial(true),
-m_senderStatus(senderstatus::EnumSenderStatus::responseOk) {
-    if (s_staticResource.PublicServerUserName.length() != sizeof (m_loginData.username)
-            || sizeof (m_loginData.password) != (s_staticResource.PublicServerPassword.length()))
-        throw runtime_error("DataSender(): PublicServerUserName or PublicServerPassword Illegal");
+m_senderStatus(senderstatus::EnumSenderStatus::responseOk),
+s_carDataQueue(Resource::GetResource()->GetVehicleDataQueue()),
+s_tcpConn(Resource::GetResource()->GetTcpConnWithPublicPlatform()) {
+    if (Resource::GetResource()->GetPublicServerUserName().length() > sizeof (m_loginData.username)
+            || (Resource::GetResource()->GetPublicServerPassword().length() > sizeof (m_loginData.password)))
+        throw runtime_error("Sender(): PublicServerUserName or PublicServerPassword Illegal");
 
-    s_staticResource.PublicServerUserName.copy((char*) m_loginData.username, sizeof (m_loginData.username));
-    s_staticResource.PublicServerPassword.copy((char*) m_loginData.password, sizeof (m_loginData.password));
-    m_loginData.encryptionAlgorithm = s_staticResource.EncryptionAlgorithm;
+    Resource::GetResource()->GetPublicServerUserName().copy((char*) m_loginData.username, sizeof (m_loginData.username));
+    Resource::GetResource()->GetPublicServerPassword().copy((char*) m_loginData.password, sizeof (m_loginData.password));
+    m_loginData.encryptionAlgorithm = Resource::GetResource()->GetEncryptionAlgorithm();
+    m_loginData.header.encryptionAlgorithm = m_loginData.encryptionAlgorithm;
+    m_logoutData.header.encryptionAlgorithm = m_loginData.encryptionAlgorithm;
 
     m_loginData.header.cmdId = enumCmdCode::platformLogin;
     m_logoutData.header.cmdId = enumCmdCode::platformLogout;
 
-    s_staticResource.PaltformId.copy((char*) m_loginData.header.vin, VINLEN);
-    s_staticResource.PaltformId.copy((char*) m_logoutData.header.vin, VINLEN);
-
-    m_loginData.header.encryptionAlgorithm = s_staticResource.EncryptionAlgorithm;
-    m_logoutData.header.encryptionAlgorithm = s_staticResource.EncryptionAlgorithm;
+    Resource::GetResource()->GetPaltformId().copy((char*) m_loginData.header.vin, VINLEN);
+    Resource::GetResource()->GetPaltformId().copy((char*) m_logoutData.header.vin, VINLEN);
 
     m_loginData.header.dataUnitLength = sizeof (LoginDataForward_t) - sizeof (DataPacketHeader) - 1;
     m_logoutData.header.dataUnitLength = sizeof (LogoutDataForward_t) - sizeof (DataPacketHeader) - 1;
@@ -151,10 +150,12 @@ void Sender::runForCarCompliance() {
 void Sender::setupConnection() {
     if (s_tcpConn.isConnected())
         return;
-    
+
     s_tcpConn.Close();
-    for (; !s_tcpConn.Connect(); sleep(s_staticResource.ReSetupPeroid))
+    for (; !s_tcpConn.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
         cout << "[WARN] Sender::setupConnection(): Connect refused by Public Server. Reconnecting...\n" << endl;
+        s_tcpConn.Connect();
+    }
     cout << "[INFO] Sender: Connection with public platform established\n" << endl;
 }
 
@@ -184,7 +185,7 @@ void Sender::forwardCarData() {
             resend = true;
             continue;
         }
-        readResponse(s_staticResource.ReadResponseTimeOut);
+        readResponse(Resource::GetResource()->GetReadResponseTimeOut());
 
         switch (m_senderStatus) {
             case senderstatus::EnumSenderStatus::connectionClosed:
@@ -196,11 +197,18 @@ void Sender::forwardCarData() {
             case senderstatus::EnumSenderStatus::responseNotOk:
                 cout << "[WARN] Sender::forwardCarData(): forward car data response not ok, response flag: " << (int) ((DataPacketHeader_t*) m_responseBuf->array())->responseFlag << endl << endl;
                 //            outputMsg(cout, m_carData->m_vin, m_carData->getCollectTime(), m_lastSendTime);
-            case senderstatus::EnumSenderStatus::carLoginOk: {
+            case senderstatus::EnumSenderStatus::carLoginOk:
+            {
                 string vin((char*) ((DataPacketHeader_t*) m_responseBuf->array())->vin, VINLEN);
-                cout << "[DEBUG] Sender: put " << vin << " response packet(" 
-                        << m_responseBuf->remaining() << " bytes) into responseDataQueue\n" << endl;
-                s_responseDataQueue.put(m_responseBuf);
+//                cout << "[DEBUG] Sender: put " << vin << " response packet("
+//                        << m_responseBuf->remaining() << " bytes) into responseDataQueue\n" << endl;
+                //                s_responseDataQueue.put(m_responseBuf);
+
+                Resource::ConnTable_t::iterator iter = Resource::GetResource()->GetVechicleConnTable().find(vin);
+                if (iter == Resource::GetResource()->GetVechicleConnTable().end())
+                    Util::output(vin, "vin not existing in VechicleConnTable when Sneder try to forward response");
+                else
+                    iter->second->write(*m_responseBuf);
                 break;
             }
             case senderstatus::EnumSenderStatus::responseFormatErr:
@@ -246,7 +254,7 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
         int nowYear = timeTM->tm_year;
         localtime(&m_lastloginTime);
 
-        if (m_serialNumber > s_staticResource.MaxSerialNumber
+        if (m_serialNumber > Resource::GetResource()->GetMaxSerialNumber()
                 || nowDay != timeTM->tm_mday
                 || nowMon != timeTM->tm_mon
                 || nowYear != timeTM->tm_year)
@@ -257,17 +265,19 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
         tcpSendData(enumCmdCode::platformLogin);
         if (!needResponse)
             break;
-        cout << "[DEBUG] Sender: waiting for public server's response...\n" <<  endl;
-        readResponse(s_staticResource.ReadResponseTimeOut);
+        cout << "[DEBUG] Sender: waiting for public server's response...\n" << endl;
+        readResponse(Resource::GetResource()->GetReadResponseTimeOut());
 
         switch (m_senderStatus) {
             case senderstatus::EnumSenderStatus::connectionClosed:
                 setupConnection();
                 break;
-            case senderstatus::EnumSenderStatus::timeout: {
-                size_t timeToSleep = s_staticResource.LoginTimes >= i ? s_staticResource.LoginIntervals : s_staticResource.LoginIntervals2;
-                cout << "[WARN] Sender::login(): read response " << s_staticResource.ReadResponseTimeOut 
-                        << "s timeout, sleep " << timeToSleep << "s and resend\n" <<endl;
+            case senderstatus::EnumSenderStatus::timeout:
+            {
+                size_t timeToSleep = Resource::GetResource()->GetLoginTimes() >= i ? 
+                    Resource::GetResource()->GetLoginIntervals() : Resource::GetResource()->GetLoginIntervals2();
+                cout << "[WARN] Sender::login(): read response " << Resource::GetResource()->GetReadResponseTimeOut()
+                        << "s timeout, sleep " << timeToSleep << "s and resend\n" << endl;
                 sleep(timeToSleep);
                 break;
             }
@@ -286,7 +296,7 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
                 throw runtime_error(m_stream.str());
         }
     } while (resend);
-    
+
     m_serialNumber++;
     m_lastloginTime = time(NULL);
 #if DEBUG
@@ -407,10 +417,7 @@ void Sender::readResponse(const int& timeout) {
     m_responseBuf->clear();
     DataPacketHeader_t* responseHdr = (DataPacketHeader_t*) m_responseBuf->array();
     try {
-        if (!s_tcpConn.Read(*m_responseBuf, 2, timeout * 1000000)) {
-            m_senderStatus = senderstatus::EnumSenderStatus::timeout;
-            return;
-        }
+        s_tcpConn.Read(*m_responseBuf, 2, timeout * 1000000);
         if (responseHdr->startCode[0] != '#' || responseHdr->startCode[1] != '#') {
             m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
             return;
@@ -420,10 +427,7 @@ void Sender::readResponse(const int& timeout) {
             //            throw runtime_error(m_stream.str());
         }
 
-        if (!s_tcpConn.Read(*m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000000)) {
-            m_senderStatus = senderstatus::EnumSenderStatus::timeout;
-            return;
-        }
+        s_tcpConn.Read(*m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000000);
 
         Util::BigLittleEndianTransfer(&responseHdr->dataUnitLength, 2);
 
@@ -435,11 +439,10 @@ void Sender::readResponse(const int& timeout) {
             m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
             return;
         }
-        if (!s_tcpConn.Read(*m_responseBuf, responseHdr->dataUnitLength + 1, timeout * 1000000)) {
-            m_senderStatus = senderstatus::EnumSenderStatus::timeout;
-            return;
-        }
-
+        s_tcpConn.Read(*m_responseBuf, responseHdr->dataUnitLength + 1, timeout * 1000000);
+    } catch (SocketTimeoutException& e) {
+        m_senderStatus = senderstatus::EnumSenderStatus::timeout;
+        return;
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         cout << "[WARN] Sender::readResponse():\n" << e.what() << endl;
         m_senderStatus = senderstatus::EnumSenderStatus::connectionClosed;

@@ -35,9 +35,11 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/src/Forward/Generator.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
+	${OBJECTDIR}/src/Forward/Resource.o \
 	${OBJECTDIR}/src/Forward/Sender.o \
+	${OBJECTDIR}/src/Forward/TcpConnWithVehicle.o \
+	${OBJECTDIR}/src/Forward/TcpServer.o \
 	${OBJECTDIR}/src/Util.o
 
 
@@ -64,20 +66,30 @@ LDLIBSOPTIONS=-L../GavinLib/ByteBuffer/dist -L../GavinLib/GSocket/dist -L../Gavi
 motorinfoupload: ${OBJECTFILES}
 	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgmqtt -lgsocket -lboost_thread -lboost_system
 
-${OBJECTDIR}/src/Forward/Generator.o: src/Forward/Generator.cpp
-	${MKDIR} -p ${OBJECTDIR}/src/Forward
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Generator.o src/Forward/Generator.cpp
-
 ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/MotorInfoForward.o src/Forward/MotorInfoForward.cpp
 
+${OBJECTDIR}/src/Forward/Resource.o: src/Forward/Resource.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Resource.o src/Forward/Resource.cpp
+
 ${OBJECTDIR}/src/Forward/Sender.o: src/Forward/Sender.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Sender.o src/Forward/Sender.cpp
+
+${OBJECTDIR}/src/Forward/TcpConnWithVehicle.o: src/Forward/TcpConnWithVehicle.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpConnWithVehicle.o src/Forward/TcpConnWithVehicle.cpp
+
+${OBJECTDIR}/src/Forward/TcpServer.o: src/Forward/TcpServer.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/GMqtt/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpServer.o src/Forward/TcpServer.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

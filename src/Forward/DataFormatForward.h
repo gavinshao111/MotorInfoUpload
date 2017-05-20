@@ -16,9 +16,11 @@
 
 #include <string>
 #include <boost/shared_ptr.hpp>
-#include "DataPacketForward.h"
-#include "GSocketClient.h"
-#include "../BlockQueue.h"
+#include "ByteBuffer.h"
+
+#define VINLEN 17
+#define MAXPACK_LENGTH 512
+
 namespace responseflag {
 
     typedef enum {
@@ -28,15 +30,34 @@ namespace responseflag {
     } enumResponseFlag;
 }
 
+typedef enum {
+    null = 1,
+    rsa = 2,
+    aes128 = 3,
+} enumEncryptionAlgorithm;
+
+typedef enum {
+    init = 0,
+    vehicleLogin = 1,
+    vehicleSignalDataUpload = 2,
+    reissueUpload = 3,
+    vehicleLogout = 4,
+    platformLogin = 5,
+    platformLogout = 6,
+    heartBeat = 7,        
+} enumCmdCode;
+
 typedef struct {
     std::string PublicServerIp;
     int PublicServerPort;
     std::string PublicServerUserName;
     std::string PublicServerPassword;
+
+    int DataReceivePort;
     std::string MQServerUrl;
     std::string MQTopicForUpload;
     std::string MQTopicForResponse;
-    
+
     std::string MQClientID;
     std::string MQServerUserName;
     std::string MQServerPassword;
@@ -62,23 +83,23 @@ typedef struct {
      * 未响应：
      *  国标2：如客户端平台未收到应答，平台重新登入
      */
-//    size_t CarDataResendIntervals;
-//    size_t MaxSendCarDataTimes;
+    //    size_t CarDataResendIntervals;
+    //    size_t MaxSendCarDataTimes;
 
     enumEncryptionAlgorithm EncryptionAlgorithm;
-    
-//    blockqueue::BlockQueue<DataPacketForward*>* dataQueue;
+
+    //    blockqueue::BlockQueue<DataPacketForward*>* dataQueue;
 
     /* 平台登入登出的唯一识别号，
      * 城市邮政编码 + VIN前三位（地方平台使用GOV）+ 两位自定义数据 + "000000"
      */
     std::string PaltformId;
     size_t ReSetupPeroid; // tcp 中断后每隔几秒重连
-    
-//    gavinsocket::GSocketClient* tcpConnection;
+
+    //    gavinsocket::GSocketClient* tcpConnection;
     size_t MaxSerialNumber;
 
-} StaticResourceForward;
+} StaticResourceForward1;
 
 #pragma pack(1)
 
@@ -90,6 +111,22 @@ typedef struct TimeForward {
     uint8_t min;
     uint8_t sec;
 } TimeForward_t;
+
+typedef struct DataPacketHeader {
+    uint8_t startCode[2];
+    uint8_t cmdId;
+    uint8_t responseFlag;
+    uint8_t vin[VINLEN];
+    uint8_t encryptionAlgorithm;
+    uint16_t dataUnitLength;
+
+    DataPacketHeader() {
+        startCode[0] = '#';
+        startCode[1] = '#';
+        responseFlag = 0xfe;
+    }
+
+} DataPacketHeader_t;
 
 typedef struct LoginDataForward {
     // 登入登出流水号 may be we should store it in DB.
@@ -110,9 +147,21 @@ typedef struct LogoutDataForward {
 } LogoutDataForward_t;
 #pragma pack()
 
+struct VehicleDataStructInfo {
+    const static uint8_t CBV_typeCode = 1;
+    const static size_t CBV_size = 20;
+    const static uint8_t DM_typeCode = 2;
+    const static size_t DM_size = 13;
+    const static uint8_t L_typeCode = 5;
+    const static size_t L_size = 9;
+    const static uint8_t EV_typeCode = 6;
+    const static size_t EV_size = 14;
+    const static uint8_t A_typeCode = 7;
+    const static uint8_t RESV_typeCode = 8;
+    const static uint8_t REST_typeCode = 9;
+};
+
 typedef boost::shared_ptr<bytebuf::ByteBuffer> BytebufSPtr_t;
-typedef blockqueue::BlockQueue<BytebufSPtr_t> DataQueue_t;
-typedef gavinsocket::GSocketClient TcpConn_t;
 
 #endif /* DATAFORMATFORWARD_H */
 
