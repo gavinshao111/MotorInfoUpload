@@ -16,7 +16,7 @@
 Resource* Resource::s_resource = NULL;
 
 Resource::Resource() :
-PublicServerIp("10.34.16.94"),
+PublicServerIp("127.0.0.1"),
 PublicServerPort(1234),
 PublicServerUserName("LEAP"),
 PublicServerPassword("LEAP"),
