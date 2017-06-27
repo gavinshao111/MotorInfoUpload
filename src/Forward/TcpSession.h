@@ -48,6 +48,7 @@ private:
     uint16_t m_dataUnitLen;
     boost::asio::deadline_timer m_timer;
     size_t m_heartBeatCycle;
+    std::stringstream m_stream;
 
     friend class TcpServer;
 

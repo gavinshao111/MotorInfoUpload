@@ -504,8 +504,9 @@ void Sender::outputMsg(ostream& out, const string& vin, const time_t& collectTim
             << setw(21) << setfill(' ') << vin
             << setw(23) << setfill(' ') << Util::timeToStr(collectTime)
             << setw(23) << setfill(' ') << Util::timeToStr(sendTime);
-    if (data != NULL)
+    if (data != NULL) {
         data->outputAsDec(out);
+    }
     out << endl;
-    out.flush();
+    out.flush();    
 }

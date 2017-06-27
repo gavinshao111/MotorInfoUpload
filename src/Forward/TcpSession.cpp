@@ -14,6 +14,7 @@
 #include "TcpSession.h"
 
 #include <iostream>
+#include <fstream>
 #include <boost/bind.hpp>
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <stdexcept>
@@ -87,9 +88,15 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
 
     m_hdr = (DataPacketHeader_t*) m_packetRef->array();
     std::cout << "[TcpSession::readHeaderHandler] m_hdr->cmdId: " << (int) m_hdr->cmdId << std::endl;
-    if (m_vinStr.compare(VinInital) == 0)
+    if (m_vinStr.compare(VinInital) == 0) {
         m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
-
+        std::cout << "assign vin, source string: " << m_vinStr <<"\nhex:"<< std::endl;
+        bytebuf::ByteBuffer vintmp(30);
+        vintmp.put(m_hdr->vin, 0, sizeof (m_hdr->vin));
+        vintmp.flip();
+        vintmp.outputAsHex(std::cout);
+        std::cout << std::endl;        
+    }
     readDataUnit();
 }
 
@@ -165,9 +172,9 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
         }
         return;
     }
-    std::stringstream msg;
-    msg << bytes_transferred << " bytes sent";
-    Util::output(m_vinStr, msg.str());
+    m_stream.str("");
+    m_stream << bytes_transferred << " bytes sent";
+    Util::output(m_vinStr, m_stream.str());
 }
 
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
@@ -183,6 +190,11 @@ void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
 void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
 
+//    std::ofstream file;
+//    file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
+//    m_packetRef->outputAsHex(file);
+//    file.close();
+
     BytebufSPtr_t rtData;
     int cmdId = m_hdr->cmdId;
     if (cmdId == enumCmdCode::reissueUpload || cmdId == enumCmdCode::vehicleSignalDataUpload) {
@@ -191,7 +203,7 @@ void TcpSession::parseDataUnit() {
         try {
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
             // 前6位为采集时间，最后一位为check code
-            rtData->put(*m_packetRef, sizeof(TimeForward_t));
+            rtData->put(*m_packetRef, sizeof (TimeForward_t));
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
                 switch (typ) {
@@ -243,10 +255,11 @@ void TcpSession::parseDataUnit() {
                         }
                         break;
                     }
-                    default: {
-                        std::stringstream errMsg;
-                        errMsg << "invalid info type code: " << typ;
-                        throw std::runtime_error(errMsg.str());
+                    default:
+                    {
+                        m_stream.str("");
+                        m_stream << "invalid info type code: " << typ;
+                        throw std::runtime_error(m_stream.str());
                     }
                 }
             }
@@ -290,8 +303,8 @@ void TcpSession::parseDataUnit() {
         }
         throw std::runtime_error("invalid packet format");
     } else {
-        std::stringstream errMsg;
-        errMsg << "invalid cmd id: " << cmdId;
-        throw std::runtime_error(errMsg.str());
+        m_stream.str("");
+        m_stream << "invalid cmd id: " << cmdId;
+        throw std::runtime_error(m_stream.str());
     }
 }
