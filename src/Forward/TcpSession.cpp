@@ -190,7 +190,8 @@ void TcpSession::parseDataUnit() {
 
         try {
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
-            // 最后一位为check code
+            // 前6位为采集时间，最后一位为check code
+            rtData->put(*m_packetRef, sizeof(TimeForward_t));
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
                 switch (typ) {
@@ -243,8 +244,9 @@ void TcpSession::parseDataUnit() {
                         break;
                     }
                     default: {
-                        std::cout << "invalid packet format, type: " << typ << std::endl;
-                        throw std::runtime_error("invalid packet format");
+                        std::stringstream errMsg;
+                        errMsg << "invalid info type code: " << typ;
+                        throw std::runtime_error(errMsg.str());
                     }
                 }
             }
