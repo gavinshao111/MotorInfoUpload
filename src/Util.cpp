@@ -23,9 +23,11 @@
 #include <arpa/inet.h>
 #include <stdexcept>
 #include <iostream>
-#include "DataFormat.h"
 
 using namespace std;
+
+#define TIMEFORMAT "%Y-%m-%d %H:%M:%S"
+#define TIMEFORMAT_ "%d-%02d-%02d %02d:%02d:%02d"
 
 string Util::s_nowtimeStr = "";
 
