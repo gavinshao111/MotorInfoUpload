@@ -13,23 +13,15 @@
 
 #include "Resource.h"
 
-#include <cstdlib>
-
 Resource* Resource::s_resource = NULL;
 
 Resource::Resource() :
-PublicServerIp("10.34.16.181"),
+PublicServerIp("10.34.16.94"),
 PublicServerPort(1234),
 PublicServerUserName("LEAP"),
 PublicServerPassword("LEAP"),
 EncryptionAlgorithm(enumEncryptionAlgorithm::null),
-ThePlatformTcpServicePort(8885),
-MQServerUrl("ssl://120.26.86.124:8883"),
-// topic format: /carid/lpcloud/candata/gbt32960/response
-MQTopicForResponse("/lpcloud/candata/gbt32960/response"),
-MQClientID("VehicleInfoForwardPlatform"),
-MQServerUserName("easydarwin"),
-MQServerPassword("123456"),
+ThePlatformTcpServicePort(18885),
 ReadResponseTimeOut(10),
 LoginTimes(3),
 LoginIntervals(60),
@@ -41,11 +33,6 @@ MaxSerialNumber(65531),
 TcpConnWithPublicPlatform(PublicServerIp, PublicServerPort),
 VehicleDataQueue(1024),
 HeartBeatCycle(10) {
-    std::string pathOfED = getenv("ED");
-    pathOfServerPublicKey += pathOfED;
-    pathOfServerPublicKey.append("/emqtt.pem");
-    pathOfPrivateKey += pathOfED;
-    pathOfPrivateKey.append("/emqtt.key");
 }
 
 Resource* Resource::GetResource() {

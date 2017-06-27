@@ -21,7 +21,7 @@
 #include "../BlockQueue.h"
 #include "GSocket.h"
 #include "DataFormatForward.h"
-#include "TcpConnWithVehicle.h"
+#include "TcpSession.h"
 
 class Resource {
 public:
@@ -68,34 +68,6 @@ public:
         return ReadResponseTimeOut;
     }
 
-    const std::string& GetPathOfServerPublicKey() const {
-        return pathOfServerPublicKey;
-    }
-
-    const std::string& GetPathOfPrivateKey() const {
-        return pathOfPrivateKey;
-    }
-
-    const std::string& GetMQServerPassword() const {
-        return MQServerPassword;
-    }
-
-    const std::string& GetMQServerUserName() const {
-        return MQServerUserName;
-    }
-
-    const std::string& GetMQClientID() const {
-        return MQClientID;
-    }
-
-    const std::string& GetMQTopicForResponse() const {
-        return MQTopicForResponse;
-    }
-
-    const std::string& GetMQServerUrl() const {
-        return MQServerUrl;
-    }
-
     const int& GetThePlatformTcpServicePort() const {
         return ThePlatformTcpServicePort;
     }
@@ -130,6 +102,10 @@ public:
         return HeartBeatCycle;
     }
 
+    boost::asio::io_service& GetIoService() {
+        return IoService;
+    }
+
 private:
     Resource();
     
@@ -141,15 +117,6 @@ private:
     std::string PublicServerPassword;
 
     int ThePlatformTcpServicePort;
-    std::string MQServerUrl;
-//    std::string MQTopicForUpload;
-    std::string MQTopicForResponse;
-
-    std::string MQClientID;
-    std::string MQServerUserName;
-    std::string MQServerPassword;
-    std::string pathOfPrivateKey;
-    std::string pathOfServerPublicKey;
 
     /*
      * 等待公共平台回应超时（ReadResponseTimeOut），
@@ -193,6 +160,7 @@ private:
     std::mutex MtxForTable;
     
     size_t HeartBeatCycle;  // 车机与我平台的默认心跳周期
+    boost::asio::io_service IoService;
 };
 
 #endif /* RESOURCE_H */

@@ -6,6 +6,7 @@
 #include "Sender.h"
 #include "TcpServer.h"
 #include "Resource.h"
+#include "../Util.h"
 //#include "glog/logging.h"
 
 /*
@@ -24,19 +25,23 @@ void TcpServiceTask();
 int main(int argc, char** argv) {
     try {
         Resource::GetResource();
+        
         boost::thread SenderThread(senderTask);
         boost::thread TcpServiceThread(TcpServiceTask);
 
-        for (; std::cin.get() != 'q';);
+#if true
+        // debug mode
+        std::cout << "press any key to quit" << std::endl;
+        std::cin.get();
         SenderThread.interrupt();
-        TcpServiceThread.interrupt();
+        Resource::GetResource()->GetIoService().stop();
         
         SenderThread.join();
         TcpServiceThread.join();
+#endif
     } catch (std::exception &e) {
-        std::cout << "ERROR: Exception in " << __FILE__;
-        std::cout << " (" << __func__ << ") on line " << __LINE__ << std::endl;
-        std::cout << "ERROR: " << e.what() << std::endl;
+        std::string errMsg(e.what());
+        Util::output("ERROR", errMsg);
     }
     std::cout << "done." << std::endl;
 
@@ -45,7 +50,6 @@ int main(int argc, char** argv) {
 
 void senderTask() {
     Sender sender;
-    std::cout << "sender:" << boost::this_thread::get_id() << std::endl;
 #if CarCompliance
     sender.runForCarCompliance();
 #else
@@ -65,8 +69,7 @@ void senderTask() {
  */
 
 void TcpServiceTask() {
-    std::cout << "tcpServer:" << boost::this_thread::get_id() << std::endl;
-    boost::asio::io_service ioService;
+    boost::asio::io_service& ioService = Resource::GetResource()->GetIoService();
     TcpServer tcpServer(ioService, Resource::GetResource()->GetThePlatformTcpServicePort());
     ioService.run();
 }

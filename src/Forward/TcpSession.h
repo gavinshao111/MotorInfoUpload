@@ -5,14 +5,14 @@
  */
 
 /* 
- * File:   TcpConnWithVehicle.h
+ * File:   TcpSession.h
  * Author: 10256
  *
  * Created on 2017年5月16日, 下午5:12
  */
 
-#ifndef TCPCONNWITHVEHICLE_H
-#define TCPCONNWITHVEHICLE_H
+#ifndef TCPSESSION_H
+#define TCPSESSION_H
 
 #include <boost/smart_ptr/enable_shared_from_this.hpp>
 #include <boost/asio.hpp>
@@ -23,16 +23,16 @@
 
 class TcpServer;
 
-class TcpConnWithVehicle : public boost::enable_shared_from_this<TcpConnWithVehicle> {
+class TcpSession : public boost::enable_shared_from_this<TcpSession> {
 public:
-    virtual ~TcpConnWithVehicle();
+    virtual ~TcpSession();
 
     boost::asio::ip::tcp::socket& socket();
     void readHeader();
     void write(const bytebuf::ByteBuffer& src);
     void write(const bytebuf::ByteBuffer& src, const size_t& offset, const size_t& length);
 private:
-    TcpConnWithVehicle(boost::asio::io_service&);
+    TcpSession(boost::asio::io_service&);
     void readDataUnit();
     void readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred);
     void readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred);
@@ -52,7 +52,7 @@ private:
     friend class TcpServer;
 
 };
-typedef boost::shared_ptr<TcpConnWithVehicle> SessionRef_t;
+typedef boost::shared_ptr<TcpSession> SessionRef_t;
 
-#endif /* TCPCONNWITHVEHICLE_H */
+#endif /* TCPSESSION_H */
 

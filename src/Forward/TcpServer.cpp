@@ -13,7 +13,7 @@
 #include "TcpServer.h"
 #include <boost/bind.hpp>
 #include "../Util.h"
-#include "TcpConnWithVehicle.h"
+#include "TcpSession.h"
 
 using namespace boost::asio;
 
@@ -38,7 +38,7 @@ void TcpServer::acceptHandler(SessionRef_t session, const boost::system::error_c
 }
 
 void TcpServer::startAccept() {
-    SessionRef_t session(new TcpConnWithVehicle(m_acceptor.get_io_service()));
+    SessionRef_t session(new TcpSession(m_acceptor.get_io_service()));
     m_acceptor.async_accept(session->socket(),
             boost::bind(&TcpServer::acceptHandler, this, session, placeholders::error));
 }

@@ -88,11 +88,11 @@ namespace blockqueue {
             return data;
         }
 
-        size_t remaining() {
+        size_t remaining() const {
             return m_queue.size();
         }
 
-        size_t capacity() {
+        const size_t& capacity() const {
             return m_capacity;
         }
         

@@ -16,7 +16,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
-#include "TcpConnWithVehicle.h"
+#include "TcpSession.h"
 
 class TcpServer {
 public:

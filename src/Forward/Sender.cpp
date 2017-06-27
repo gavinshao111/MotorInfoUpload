@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <string.h>
 #include <boost/smart_ptr/make_shared_object.hpp>
+#include <boost/asio.hpp>
 #include <bits/stl_map.h>
 #include <bits/stl_pair.h>
 #include <bits/basic_string.h>
@@ -32,6 +33,7 @@ Sender::Sender() :
 m_serialNumber(1),
 m_lastloginTime(0),
 m_lastSendTime(0),
+m_responseBuf(512),
 m_senderStatus(senderstatus::EnumSenderStatus::responseOk),
 s_carDataQueue(Resource::GetResource()->GetVehicleDataQueue()),
 s_tcpConn(Resource::GetResource()->GetTcpConnWithPublicPlatform()) {
@@ -51,12 +53,10 @@ s_tcpConn(Resource::GetResource()->GetTcpConnWithPublicPlatform()) {
     Resource::GetResource()->GetPaltformId().copy((char*) m_loginData.header.vin, VINLEN);
     Resource::GetResource()->GetPaltformId().copy((char*) m_logoutData.header.vin, VINLEN);
 
-    m_loginData.header.dataUnitLength = sizeof (LoginDataForward_t) - sizeof (DataPacketHeader) - 1;
-    m_logoutData.header.dataUnitLength = sizeof (LogoutDataForward_t) - sizeof (DataPacketHeader) - 1;
-    Util::BigLittleEndianTransfer(&m_loginData.header.dataUnitLength, 2);
-    Util::BigLittleEndianTransfer(&m_logoutData.header.dataUnitLength, 2);
-    //    m_readBuf = ByteBuffer::allocate(512);
-    m_responseBuf = boost::make_shared<ByteBuffer>(512);
+    uint16_t dataUnitLength = sizeof (LoginDataForward_t) - sizeof (DataPacketHeader) - 1;
+    m_loginData.header.dataUnitLength = boost::asio::detail::socket_ops::host_to_network_short(dataUnitLength);
+    dataUnitLength = sizeof (LogoutDataForward_t) - sizeof (DataPacketHeader) - 1;
+    m_logoutData.header.dataUnitLength = boost::asio::detail::socket_ops::host_to_network_short(dataUnitLength);
 
     ofstream file;
     file.open("log/message.txt", ofstream::out | ofstream::trunc | ofstream::binary);
@@ -84,22 +84,21 @@ void Sender::run() {
         for (;;) {
             m_carData = s_carDataQueue.take();
             if (!m_carData->hasRemaining()) {
-                cout << "[WARN] Sender::run(): take an empty realtimeData\n" << endl;
+                Util::output("WARN", "Sender::run(): take an empty realtimeData");
                 continue;
             }
-            string vin((char*) ((DataPacketHeader_t*) m_carData->array())->vin, VINLEN);
-            cout << "[INFO] Sender: get vehicle signal data from " << vin << endl << endl;
+            m_packetHdr = (DataPacketHeader_t*) m_carData->array();
+            m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
+            Util::output(m_vin, "Sender get vehicle data from data queue");
 
             forwardCarData();
         }
         logout();
     } catch (exception &e) {
-        cout << "ERROR: Exception in " << __FILE__;
-        cout << " (" << __func__ << ") on line " << __LINE__ << endl;
-        cout << "ERROR: " << e.what() << endl;
+        Util::output("ERROR", e.what());
     }
     s_tcpConn.Close();
-    cout << "[DONE] Sender quiting...\n" << endl;
+    Util::output("DONE", "Sender quiting...");
 }
 
 /*
@@ -120,31 +119,30 @@ void Sender::runForCarCompliance() {
             setupConnAndLogin(false);
             logout();
         }
-        cout << "[INFO] Sender: login logout 5 times done." << endl;
+        Util::output("INFO", "Sender: login logout 5 times done");
 
         // 转发测试前先清空 dataQueue
         s_carDataQueue.clear();
 
         // 此时等待车机发送测试数据，开始转发测试
         for (;;) {
-            cout << "[INFO] Sender: waiting for forward data..." << endl;
+            Util::output("INFO", "Sender: waiting for forward data...");
             m_carData = s_carDataQueue.take();
             if (!m_carData->hasRemaining()) {
-                cout << "[WARN] Sender::runForCarCompliance(): take an empty realtimeData" << endl;
+                Util::output("WARN", "Sender::runForCarCompliance(): take an empty realtimeData");
                 continue;
             }
-            string vin((char*) ((DataPacketHeader_t*) m_carData->array())->vin, VINLEN);
-            cout << "[INFO] Sender: get vehicle signal data from " << vin << endl << endl;
+            m_packetHdr = (DataPacketHeader_t*) m_carData->array();
+            m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
+            Util::output(m_vin, "Sender get vehicle data from data queue");
 
-            tcpSendData(enumCmdCode::vehicleSignalDataUpload);
+            tcpSendData(m_packetHdr->cmdId);
         }
     } catch (exception &e) {
-        cout << "ERROR: Exception in " << __FILE__;
-        cout << " (" << __func__ << ") on line " << __LINE__ << endl;
-        cout << "ERROR: " << e.what() << endl;
+        Util::output("ERROR", e.what());
     }
     s_tcpConn.Close();
-    cout << "[DONE] Sender quiting...\n" << endl;
+    Util::output("DONE", "Sender quiting...");
 }
 
 void Sender::setupConnection() {
@@ -153,10 +151,10 @@ void Sender::setupConnection() {
 
     s_tcpConn.Close();
     for (; !s_tcpConn.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
-        cout << "[WARN] Sender::setupConnection(): Connect refused by Public Server. Reconnecting...\n" << endl;
+        Util::output("WARN", "Sender connect refused by Public Server. Reconnecting...");
         s_tcpConn.Connect();
     }
-    cout << "[INFO] Sender: Connection with public platform established\n" << endl;
+    Util::output("INFO", "Sender connection with public platform established");
 }
 
 /*
@@ -180,7 +178,7 @@ void Sender::forwardCarData() {
             setupConnAndLogin();
         }
         m_senderStatus = senderstatus::EnumSenderStatus::init;
-        tcpSendData(enumCmdCode::vehicleSignalDataUpload);
+        tcpSendData(m_packetHdr->cmdId);
         if (m_senderStatus == senderstatus::EnumSenderStatus::connectionClosed) {
             resend = true;
             continue;
@@ -195,20 +193,23 @@ void Sender::forwardCarData() {
             case senderstatus::EnumSenderStatus::responseOk:
                 break;
             case senderstatus::EnumSenderStatus::responseNotOk:
-                cout << "[WARN] Sender::forwardCarData(): forward car data response not ok, response flag: " << (int) ((DataPacketHeader_t*) m_responseBuf->array())->responseFlag << endl << endl;
-                //            outputMsg(cout, m_carData->m_vin, m_carData->getCollectTime(), m_lastSendTime);
+            {
+                m_stream.str("");
+                m_stream << "Sender::forwardCarData(): forward car data response not ok, response flag: " 
+                        << (int) m_packetHdr->responseFlag;
+                Util::output(m_vin, m_stream.str());
+            }
             case senderstatus::EnumSenderStatus::carLoginOk:
             {
-                string vin((char*) ((DataPacketHeader_t*) m_responseBuf->array())->vin, VINLEN);
-//                cout << "[DEBUG] Sender: put " << vin << " response packet("
-//                        << m_responseBuf->remaining() << " bytes) into responseDataQueue\n" << endl;
+                //                cout << "[DEBUG] Sender: put " << vin << " response packet("
+                //                        << m_responseBuf.remaining() << " bytes) into responseDataQueue\n" << endl;
                 //                s_responseDataQueue.put(m_responseBuf);
 
-                Resource::ConnTable_t::iterator iter = Resource::GetResource()->GetVechicleConnTable().find(vin);
+                Resource::ConnTable_t::iterator iter = Resource::GetResource()->GetVechicleConnTable().find(m_vin);
                 if (iter == Resource::GetResource()->GetVechicleConnTable().end())
-                    Util::output(vin, "vin not existing in VechicleConnTable when Sneder try to forward response");
+                    Util::output(m_vin, "vin not existing in VechicleConnTable when Sneder try to forward response");
                 else
-                    iter->second->write(*m_responseBuf);
+                    iter->second->write(m_responseBuf);
                 break;
             }
             case senderstatus::EnumSenderStatus::responseFormatErr:
@@ -274,8 +275,8 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
                 break;
             case senderstatus::EnumSenderStatus::timeout:
             {
-                size_t timeToSleep = Resource::GetResource()->GetLoginTimes() >= i ? 
-                    Resource::GetResource()->GetLoginIntervals() : Resource::GetResource()->GetLoginIntervals2();
+                size_t timeToSleep = Resource::GetResource()->GetLoginTimes() >= i ?
+                        Resource::GetResource()->GetLoginIntervals() : Resource::GetResource()->GetLoginIntervals2();
                 cout << "[WARN] Sender::login(): read response " << Resource::GetResource()->GetReadResponseTimeOut()
                         << "s timeout, sleep " << timeToSleep << "s and resend\n" << endl;
                 sleep(timeToSleep);
@@ -286,7 +287,7 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
                 break;
             case senderstatus::EnumSenderStatus::responseNotOk:
                 m_stream.str("");
-                m_stream << "Sender::setupConnAndLogin(): response not ok, response flag: " << (int) ((DataPacketHeader_t*) m_responseBuf->array())->responseFlag;
+                m_stream << "Sender::setupConnAndLogin(): response not ok, response flag: " << (int) ((DataPacketHeader_t*) m_responseBuf.array())->responseFlag;
                 throw runtime_error(m_stream.str());
             case senderstatus::EnumSenderStatus::responseFormatErr:
                 throw runtime_error("Sender::setupConnAndLogin(): bad response format");
@@ -325,7 +326,10 @@ void Sender::updateLoginData() {
     m_loginData.time.min = nowTM->tm_min;
     m_loginData.time.sec = nowTM->tm_sec;
     m_loginData.serialNumber = m_serialNumber;
-    Util::BigLittleEndianTransfer(&m_loginData.serialNumber, 2);
+    m_loginData.serialNumber = boost::asio::detail::socket_ops::host_to_network_short(m_serialNumber);
+
+    m_packetHdr = &m_loginData.header;
+    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
 }
 
 void Sender::updateLogoutData() {
@@ -341,6 +345,9 @@ void Sender::updateLogoutData() {
     m_logoutData.time.min = nowTM->tm_min;
     m_logoutData.time.sec = nowTM->tm_sec;
     m_logoutData.serialNumber = m_loginData.serialNumber;
+
+    m_packetHdr = &m_logoutData.header;
+    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
 }
 
 /**
@@ -349,7 +356,7 @@ void Sender::updateLogoutData() {
  * 
  * @param cmd
  */
-void Sender::tcpSendData(const enumCmdCode & cmd) {
+void Sender::tcpSendData(const uint8_t& cmd) {
     size_t sizeToSend;
     BytebufSPtr_t dataToSend;
     time_t collectTime;
@@ -366,24 +373,25 @@ void Sender::tcpSendData(const enumCmdCode & cmd) {
                 collectTime = time(NULL);
                 break;
             case enumCmdCode::vehicleSignalDataUpload:
+            case enumCmdCode::reissueUpload:
+            case enumCmdCode::vehicleLogin:
+            case enumCmdCode::vehicleLogout:
                 dataToSend = m_carData;
                 break;
             default:
-                m_stream.str("");
-                m_stream << "Sender::tcpSendData(): Illegal cmd: " << cmd;
+                m_stream.str("[");
+                m_stream << m_vin << "] Sender::tcpSendData(): Illegal cmd: " << cmd;
                 throw runtime_error(m_stream.str());
         }
 
-        LogoutDataForward_t* pData = (LogoutDataForward_t*) dataToSend->array();
-        string vin((char*) pData->header.vin, VINLEN);
-
+        TimeForward_t* ptime = (TimeForward_t*) (dataToSend->array() + sizeof (DataPacketHeader));
         struct tm timeTM;
-        timeTM.tm_year = pData->time.year + 100;
-        timeTM.tm_mon = pData->time.mon - 1;
-        timeTM.tm_mday = pData->time.mday;
-        timeTM.tm_hour = pData->time.hour;
-        timeTM.tm_min = pData->time.min;
-        timeTM.tm_sec = pData->time.sec;
+        timeTM.tm_year = ptime->year + 100;
+        timeTM.tm_mon = ptime->mon - 1;
+        timeTM.tm_mday = ptime->mday;
+        timeTM.tm_hour = ptime->hour;
+        timeTM.tm_min = ptime->min;
+        timeTM.tm_sec = ptime->sec;
         collectTime = mktime(&timeTM);
 
         sizeToSend = dataToSend->remaining();
@@ -391,15 +399,17 @@ void Sender::tcpSendData(const enumCmdCode & cmd) {
         // 为了打印日志，将pos指针退回
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);
-        cout << "[INFO] Sender: " << sizeToSend << " bytes sent.\n" << endl;
+        m_stream.str("Sender: ");
+        m_stream << sizeToSend << " bytes sent to public server";
+        Util::output(m_vin, m_stream.str());
 
         ofstream file;
         file.open("log/message.txt", ofstream::out | ofstream::app | ofstream::binary);
-        outputMsg(file, vin, collectTime, m_lastSendTime, dataToSend.get());
+        outputMsg(file, m_vin, collectTime, m_lastSendTime, dataToSend.get());
         file.close();
-        cout << "[DEBUG] Sender: sent data write to log ... done\n" << endl;
+        //        Util::output(m_vin, "[DEBUG] Sender: sent data write to log ... done");
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
-        cout << "[WARN] Sender::tcpSendData():\n" << e.what() << endl;
+        Util::output("WARN", "Sender::tcpSendData():", e.what());
         m_senderStatus = senderstatus::EnumSenderStatus::connectionClosed;
     }
 }
@@ -414,74 +424,79 @@ void Sender::tcpSendData(const enumCmdCode & cmd) {
 void Sender::readResponse(const int& timeout) {
     TimeForward_t* responseTime;
 
-    m_responseBuf->clear();
-    DataPacketHeader_t* responseHdr = (DataPacketHeader_t*) m_responseBuf->array();
+    m_responseBuf.clear();
+    DataPacketHeader_t* packetHdrTmp = (DataPacketHeader_t*) m_responseBuf.array();
     try {
-        s_tcpConn.Read(*m_responseBuf, 2, timeout * 1000000);
-        if (responseHdr->startCode[0] != '#' || responseHdr->startCode[1] != '#') {
-            m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
-            return;
-            //            m_stream.str("");
-            //            m_stream << "Sender::readResponse(): responseFormatIncorrect: startCode[0]: "
-            //                    << (int) responseHdr->startCode[0] << "startCode[1]: " << (int) responseHdr->startCode[1];
-            //            throw runtime_error(m_stream.str());
-        }
-
-        s_tcpConn.Read(*m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000000);
-
-        Util::BigLittleEndianTransfer(&responseHdr->dataUnitLength, 2);
-
-        if (responseHdr->dataUnitLength > m_responseBuf->remaining()) {
-            //            m_stream.str("");
-            //            m_stream << "Sender::readResponse(): Illegal responseHdr->dataUnitLength: " << responseHdr->dataUnitLength;
-            //            throw runtime_error(m_stream.str());
-            cout << "[WARN] Sender::readResponse(): Illegal responseHdr->dataUnitLength: " << responseHdr->dataUnitLength;
+        s_tcpConn.Read(m_responseBuf, 2, timeout * 1000);
+        if (packetHdrTmp->startCode[0] != '#' || packetHdrTmp->startCode[1] != '#') {
             m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
             return;
         }
-        s_tcpConn.Read(*m_responseBuf, responseHdr->dataUnitLength + 1, timeout * 1000000);
+
+        s_tcpConn.Read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000);
+        m_vin.assign((char*) packetHdrTmp->vin, sizeof (packetHdrTmp->vin));
+        packetHdrTmp->dataUnitLength = boost::asio::detail::socket_ops::network_to_host_short(
+                packetHdrTmp->dataUnitLength);
+
+        if (packetHdrTmp->dataUnitLength > m_responseBuf.remaining()) {
+            m_stream.str("Sender::readResponse(): Illegal responseHdr->dataUnitLength: ");
+            m_stream << packetHdrTmp->dataUnitLength;
+            Util::output("WARN", m_stream.str());
+            m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
+            return;
+        }
+        s_tcpConn.Read(m_responseBuf, packetHdrTmp->dataUnitLength + 1, timeout * 1000000);
     } catch (SocketTimeoutException& e) {
         m_senderStatus = senderstatus::EnumSenderStatus::timeout;
         return;
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
-        cout << "[WARN] Sender::readResponse():\n" << e.what() << endl;
+        m_stream.str("Sender::readResponse():\n");
+        m_stream << e.what();
+        Util::output("WARN", m_stream.str());
         m_senderStatus = senderstatus::EnumSenderStatus::connectionClosed;
         return;
     }
-    m_responseBuf->flip();
+    m_responseBuf.flip();
 
-    uint8_t chechCode = Util::generateBlockCheckCharacter(*m_responseBuf, 2, m_responseBuf->remaining() - 3);
-    if (chechCode != m_responseBuf->get(m_responseBuf->limit() - 1)) {
-        cout << "[WARN] Sender::readResponse(): BCC in public server's response check fail" << endl;
-        cout << "Expected to be " << chechCode << ", actually is " << m_responseBuf->get(m_responseBuf->limit() - 1) << endl;
+    uint8_t chechCode = Util::generateBlockCheckCharacter(m_responseBuf, 2, m_responseBuf.remaining() - 3);
+    if (chechCode != m_responseBuf.get(m_responseBuf.limit() - 1)) {
+        Util::output("WARN", "BCC in public server's response check fail for", m_vin);
+        m_stream.str("");
+        m_stream << "Expected to be " << chechCode << ", actually is "
+                << m_responseBuf.get(m_responseBuf.limit() - 1);
+        Util::output("WARN", m_stream.str());
         m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
         return;
     }
-    if (responseHdr->dataUnitLength != sizeof (TimeForward_t)) {
-        cout << "[WARN] Sender::readResponse(): dataUnitLength in public server's response expected to 6, actually is " << responseHdr->dataUnitLength << endl;
+    if (packetHdrTmp->dataUnitLength != sizeof (TimeForward_t)) {
+        m_stream.str("");
+        m_stream << "dataUnitLength in public server's response expected to 6, actually is " 
+                << packetHdrTmp->dataUnitLength << " for " << m_vin;
+        Util::output("WARN", m_stream.str());
         m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
         return;
     }
+    m_packetHdr = packetHdrTmp;
 
-    responseTime = (TimeForward_t*) (m_responseBuf->array() + sizeof (DataPacketHeader_t));
+    responseTime = (TimeForward_t*) (m_responseBuf.array() + sizeof (DataPacketHeader_t));
     //        m_readBuf.movePosition(sizeof(DataPacketHeader_t));
-    cout << "Sender: response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
-            << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec << endl;
 
-    string vin((char*) responseHdr->vin, VINLEN);
-    cout << "Sender: response vin: " << vin << endl;
-    cout << "Sender: response encryptionAlgorithm: " << (int) responseHdr->encryptionAlgorithm << endl;
+    m_stream.str("");
+    m_stream << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
+            << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec;
+    Util::output(m_vin, m_stream.str());
+    m_stream.str("");
+    m_stream << "response encryptionAlgorithm: " << (int) packetHdrTmp->encryptionAlgorithm;
+    Util::output(m_vin, m_stream.str());
 
-    if (responseHdr->responseFlag == responseflag::enumResponseFlag::success)
-        if (responseHdr->cmdId == enumCmdCode::vehicleLogin)
+    if (packetHdrTmp->responseFlag == responseflag::enumResponseFlag::success)
+        if (packetHdrTmp->cmdId == enumCmdCode::vehicleLogin)
             m_senderStatus = senderstatus::EnumSenderStatus::carLoginOk;
         else
             m_senderStatus = senderstatus::EnumSenderStatus::responseOk;
     else
         m_senderStatus = senderstatus::EnumSenderStatus::responseNotOk;
-    m_responseBuf->position(0);
-
-    cout << endl;
+    m_responseBuf.rewind();
 }
 
 void Sender::outputMsg(ostream& out, const string& vin, const time_t& collectTime, const time_t& sendTime, const ByteBuffer* data/* = NULL*/) {

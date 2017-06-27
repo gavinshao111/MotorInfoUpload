@@ -5,13 +5,13 @@
  */
 
 /* 
- * File:   TcpConnWithVehicle.cpp
+ * File:   TcpSession.cpp
  * Author: 10256
  * 
  * Created on 2017年5月16日, 下午5:12
  */
 
-#include "TcpConnWithVehicle.h"
+#include "TcpSession.h"
 
 #include <iostream>
 #include <boost/bind.hpp>
@@ -30,7 +30,7 @@ using namespace boost::asio;
 const static int lengthOfPacketLength = 2;
 const static std::string VinInital = "Vin hasn't established";
 
-TcpConnWithVehicle::TcpConnWithVehicle(io_service& ioservice) :
+TcpSession::TcpSession(io_service& ioservice) :
 m_heartBeatCycle(Resource::GetResource()->GetHeartBeatCycle()),
 m_socket(ioservice),
 m_timer(ioservice),
@@ -38,45 +38,45 @@ m_quit(false),
 m_vinStr(VinInital) {
 }
 
-TcpConnWithVehicle::~TcpConnWithVehicle() {
+TcpSession::~TcpSession() {
     // deadline_timer的析构函数什么也不做，因此不会导致发出的async_wait被cancel。
     m_timer.cancel();
-    std::cout << m_vinStr << ": TcpConnWithVehicle destructed" << std::endl;
+    std::cout << m_vinStr << ": TcpSession destructed" << std::endl;
 }
 
-ip::tcp::socket& TcpConnWithVehicle::socket() {
+ip::tcp::socket& TcpSession::socket() {
     return m_socket;
 }
 
-void TcpConnWithVehicle::readHeader() {
+void TcpSession::readHeader() {
     m_hdr = NULL;
     m_packetRef = boost::make_shared<bytebuf::ByteBuffer>(MAXPACK_LENGTH);
 
     m_timer.expires_from_now(boost::posix_time::seconds(m_heartBeatCycle));
-    m_timer.async_wait(boost::bind(&TcpConnWithVehicle::readTimeoutHandler,
+    m_timer.async_wait(boost::bind(&TcpSession::readTimeoutHandler,
             shared_from_this(),
             placeholders::error));
 
     async_read(m_socket, buffer(m_packetRef->array(), sizeof (DataPacketHeader)),
-            boost::bind(&TcpConnWithVehicle::readHeaderHandler,
+            boost::bind(&TcpSession::readHeaderHandler,
             shared_from_this(),
             placeholders::error,
             placeholders::bytes_transferred));
 }
 
-void TcpConnWithVehicle::readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred) {
+void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     // 如果此时对方关闭socket，error.value = 2, message = End of file
     m_timer.cancel();
     if (error) {
         if (m_vinStr.compare(VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpConnWithVehicle::readHeaderHandler erase " << m_vinStr << ": " << n << std::endl;
+            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << std::endl;
         }
 
         if (error == error::operation_aborted) {
             std::cout << "read operation canceled may because time out" << std::endl;
         } else {
-            Util::output("TcpConnWithVehicle", "readHeaderHandler error: ", error.message());
+            Util::output("TcpSession", "readHeaderHandler error: ", error.message());
             std::cout << "error code: " << error.value() << std::endl;
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         }
@@ -86,42 +86,42 @@ void TcpConnWithVehicle::readHeaderHandler(const boost::system::error_code& erro
     m_packetRef->position(bytes_transferred);
 
     m_hdr = (DataPacketHeader_t*) m_packetRef->array();
-    std::cout << "[TcpConnWithVehicle::readHeaderHandler] m_hdr->cmdId: " << (int) m_hdr->cmdId << std::endl;
+    std::cout << "[TcpSession::readHeaderHandler] m_hdr->cmdId: " << (int) m_hdr->cmdId << std::endl;
     if (m_vinStr.compare(VinInital) == 0)
         m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
 
     readDataUnit();
 }
 
-void TcpConnWithVehicle::readDataUnit() {
+void TcpSession::readDataUnit() {
     m_dataUnitLen = boost::asio::detail::socket_ops::network_to_host_short(m_hdr->dataUnitLength);
     std::cout << "get dataUnitLen: " << m_dataUnitLen << std::endl;
     //    m_packetRef = boost::make_shared<bytebuf::ByteBuffer>(sizeof(DataPacketHeader) + m_dataUnitLen + 1);
 
     m_timer.expires_from_now(boost::posix_time::seconds(m_heartBeatCycle));
-    m_timer.async_wait(boost::bind(&TcpConnWithVehicle::readTimeoutHandler,
+    m_timer.async_wait(boost::bind(&TcpSession::readTimeoutHandler,
             shared_from_this(),
             placeholders::error));
 
     async_read(m_socket, buffer(m_packetRef->array() + m_packetRef->position(), m_dataUnitLen + 1),
-            boost::bind(&TcpConnWithVehicle::readDataUnitHandler,
+            boost::bind(&TcpSession::readDataUnitHandler,
             shared_from_this(),
             placeholders::error,
             placeholders::bytes_transferred));
 }
 
-void TcpConnWithVehicle::readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred) {
+void TcpSession::readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     m_timer.cancel();
     if (error) {
         if (m_vinStr.compare(VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpConnWithVehicle::readDataUnitHandler erase " << m_vinStr << ": " << n << std::endl;
+            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << std::endl;
         }
 
         if (error == error::operation_aborted) {
             std::cout << "read operation canceled may because time out" << std::endl;
         } else {
-            Util::output("TcpConnWithVehicle", "readDataUnitHandler error: ", error.message());
+            Util::output("TcpSession", "readDataUnitHandler error: ", error.message());
             std::cout << "error code: " << error.value() << std::endl;
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         }
@@ -132,36 +132,36 @@ void TcpConnWithVehicle::readDataUnitHandler(const boost::system::error_code& er
     try {
         parseDataUnit();
     } catch (std::runtime_error& e) {
-        Util::output("TcpConnWithVehicle", "dealData error: ", e.what());
+        Util::output("TcpSession", "dealData error: ", e.what());
     }
     if (!m_quit)
         readHeader();
 }
 
-void TcpConnWithVehicle::write(const bytebuf::ByteBuffer& src) {
+void TcpSession::write(const bytebuf::ByteBuffer& src) {
     write(src, 0, src.remaining());
 }
 
-void TcpConnWithVehicle::write(const bytebuf::ByteBuffer& src, const size_t& offset, const size_t& length) {
+void TcpSession::write(const bytebuf::ByteBuffer& src, const size_t& offset, const size_t& length) {
     if (src.remaining() < length + offset)
-        throw std::runtime_error("TcpConnWithVehicle::write(): src space remaining is less than the size to write");
+        throw std::runtime_error("TcpSession::write(): src space remaining is less than the size to write");
 
     async_write(m_socket, buffer(src.array() + src.position() + offset, length),
-            boost::bind(&TcpConnWithVehicle::writeHandler,
+            boost::bind(&TcpSession::writeHandler,
             shared_from_this(),
             placeholders::error,
             placeholders::bytes_transferred));
 }
 
-void TcpConnWithVehicle::writeHandler(const boost::system::error_code& error, size_t bytes_transferred) {
+void TcpSession::writeHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     // 此时对方关闭socket，m_socket.is_open()仍为true error == error::broken_pipe
     if (error) {
-        Util::output("TcpConnWithVehicle", " writeHandler error: ", error.message());
+        Util::output("TcpSession", " writeHandler error: ", error.message());
         std::cout << "error code: " << error.value() << std::endl;
         std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (m_vinStr.compare(VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpConnWithVehicle::writeHandler erase " << m_vinStr << ": " << n << std::endl;
+            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << std::endl;
         }
         return;
     }
@@ -170,7 +170,7 @@ void TcpConnWithVehicle::writeHandler(const boost::system::error_code& error, si
     Util::output(m_vinStr, msg.str());
 }
 
-void TcpConnWithVehicle::readTimeoutHandler(const boost::system::error_code& error) {
+void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
         Util::output(m_vinStr, " read Timeout");
@@ -178,9 +178,9 @@ void TcpConnWithVehicle::readTimeoutHandler(const boost::system::error_code& err
     }
 }
 
-// m_packetRef 包含了头部和数据单元和bcc，此时指向数据单元
+// m_packetRef 包含了头部和数据单元和bcc，此时pos指向数据单元
 
-void TcpConnWithVehicle::parseDataUnit() {
+void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
 
     BytebufSPtr_t rtData;
@@ -246,7 +246,7 @@ void TcpConnWithVehicle::parseDataUnit() {
                 }
             }
         } catch (bytebuf::ByteBufferException& e) {
-            Util::output(m_vinStr, "TcpConnWithVehicle::dealData() error: ", e.what());
+            Util::output(m_vinStr, "TcpSession::dealData() error: ", e.what());
             throw std::runtime_error("invalid packet format");
         }
         assert(m_packetRef->remaining() == 1);
@@ -264,10 +264,10 @@ void TcpConnWithVehicle::parseDataUnit() {
         if (cmdId == enumCmdCode::vehicleLogin) {
             std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;
             ret = Resource::GetResource()->GetVechicleConnTable().insert(std::pair<std::string, SessionRef_t>(m_vinStr, shared_from_this()));
-            std::cout << "TcpConnWithVehicle::parseDataUnit login insert " << m_vinStr << ": " << ret.second << std::endl;
+            std::cout << "TcpSession::parseDataUnit login insert " << m_vinStr << ": " << ret.second << std::endl;
         } else {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpConnWithVehicle::parseDataUnit logout erase " << m_vinStr << ": " << n << std::endl;
+            std::cout << "TcpSession::parseDataUnit logout erase " << m_vinStr << ": " << n << std::endl;
             m_quit = true;
         }
     } else if (cmdId == enumCmdCode::heartBeat) {

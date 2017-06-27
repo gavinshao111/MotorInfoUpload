@@ -49,7 +49,7 @@ private:
     void updateLogoutData();
     void updateHeader();
     void readResponse(const int& timeout);
-    void tcpSendData(const enumCmdCode& cmd);
+    void tcpSendData(const uint8_t& cmd);
     void forwardCarData();
     void setupConnAndLogin(const bool& needResponse = true);
     void logout();
@@ -63,9 +63,13 @@ private:
     uint16_t m_serialNumber;
     time_t m_lastloginTime;
     time_t m_lastSendTime;
-    boost::shared_ptr<bytebuf::ByteBuffer> m_responseBuf;
+    bytebuf::ByteBuffer m_responseBuf;
     senderstatus::EnumSenderStatus m_senderStatus;
     std::stringstream m_stream;
+    
+    std::string m_vin;
+    DataPacketHeader_t* m_packetHdr;
+    
 };
 
 #endif /* SENDER_H */

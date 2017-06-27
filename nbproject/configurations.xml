@@ -9,10 +9,10 @@
       <itemPath>src/Forward/Resource.h</itemPath>
       <itemPath>src/Forward/Sender.cpp</itemPath>
       <itemPath>src/Forward/Sender.h</itemPath>
-      <itemPath>src/Forward/TcpConnWithVehicle.cpp</itemPath>
-      <itemPath>src/Forward/TcpConnWithVehicle.h</itemPath>
       <itemPath>src/Forward/TcpServer.cpp</itemPath>
       <itemPath>src/Forward/TcpServer.h</itemPath>
+      <itemPath>src/Forward/TcpSession.cpp</itemPath>
+      <itemPath>src/Forward/TcpSession.h</itemPath>
       <itemPath>src/Util.cpp</itemPath>
       <itemPath>src/Util.h</itemPath>
     </logicalFolder>
@@ -46,7 +46,6 @@
           <incDir>
             <pElem>../GavinLib/ByteBuffer/src</pElem>
             <pElem>../GavinLib/GSocket/src</pElem>
-            <pElem>../GavinLib/GMqtt/src</pElem>
           </incDir>
           <commandLine>-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0</commandLine>
         </ccTool>
@@ -55,10 +54,9 @@
           <linkerAddLib>
             <pElem>../GavinLib/ByteBuffer/dist</pElem>
             <pElem>../GavinLib/GSocket/dist</pElem>
-            <pElem>../GavinLib/GMqtt/dist</pElem>
           </linkerAddLib>
           <commandlineTool>g++</commandlineTool>
-          <commandLine>-std=c++0x -lbytebuffer -lgmqtt -lgsocket -lboost_thread -lboost_system</commandLine>
+          <commandLine>-std=c++0x -lbytebuffer -lgsocket -lboost_thread -lboost_system</commandLine>
         </linkerTool>
       </compileType>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
@@ -75,13 +73,13 @@
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/TcpConnWithVehicle.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/TcpConnWithVehicle.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/TcpServer.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/TcpServer.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpSession.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpSession.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -122,13 +120,13 @@
       </item>
       <item path="src/Forward/Sender.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/TcpConnWithVehicle.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/TcpConnWithVehicle.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/TcpServer.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/TcpServer.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpSession.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/TcpSession.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.cpp" ex="false" tool="1" flavor2="0">
       </item>

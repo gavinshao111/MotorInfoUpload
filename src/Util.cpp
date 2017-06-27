@@ -143,7 +143,7 @@ void Util::output(const string& id, const string& message1, const string& messag
     output(id, message1, message2, message3, message4, "");
 }
 void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4, const string& message5) {
-    cout << "[" << id << "] " << message1 << message2 << message3 << message4 << message5 << " " << nowtimeStr() << endl;
+    cout << "[" << id << "] " << message1 << message2 << message3 << message4 << message5 << " " << nowtimeStr() << "\n" << endl;
 }
 
 const string& Util::nowtimeStr() {
