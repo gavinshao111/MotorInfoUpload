@@ -192,7 +192,8 @@ void TcpSession::parseDataUnit() {
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
             // 最后一位为check code
             for (; m_packetRef->remaining() > 1;) {
-                switch (m_packetRef->get(m_packetRef->position())) {
+                uint8_t typ = m_packetRef->get(m_packetRef->position());
+                switch (typ) {
                     case VehicleDataStructInfo::CBV_typeCode:
                         rtData->put(*m_packetRef, VehicleDataStructInfo::CBV_size + 1);
                         break;
@@ -241,8 +242,10 @@ void TcpSession::parseDataUnit() {
                         }
                         break;
                     }
-                    default:
+                    default: {
+                        std::cout << "invalid packet format, type: " << typ << std::endl;
                         throw std::runtime_error("invalid packet format");
+                    }
                 }
             }
         } catch (bytebuf::ByteBufferException& e) {
