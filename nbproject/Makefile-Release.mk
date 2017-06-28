@@ -35,6 +35,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/src/Forward/Logger.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
 	${OBJECTDIR}/src/Forward/Resource.o \
 	${OBJECTDIR}/src/Forward/Sender.o \
@@ -66,6 +67,11 @@ LDLIBSOPTIONS=
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/motorinfoupload.exe: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS}
+
+${OBJECTDIR}/src/Forward/Logger.o: src/Forward/Logger.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Logger.o src/Forward/Logger.cpp
 
 ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward

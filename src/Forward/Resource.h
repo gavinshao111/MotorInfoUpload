@@ -22,9 +22,11 @@
 #include "GSocket.h"
 #include "DataFormatForward.h"
 #include "TcpSession.h"
+#include "Logger.h"
 
 class Resource {
 public:
+    
     static Resource* GetResource();
     virtual ~Resource();
 
@@ -106,6 +108,11 @@ public:
         return IoService;
     }
 
+    Logger& GetLogger() {
+        return logger;
+    }
+
+
 private:
     Resource();
     
@@ -161,6 +168,7 @@ private:
     
     size_t HeartBeatCycle;  // 车机与我平台的默认心跳周期
     boost::asio::io_service IoService;
+    Logger logger;
 };
 
 #endif /* RESOURCE_H */

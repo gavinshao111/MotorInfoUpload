@@ -13,6 +13,7 @@
 #include "TcpServer.h"
 #include <boost/bind.hpp>
 #include "../Util.h"
+#include "Resource.h"
 #include "TcpSession.h"
 
 using namespace boost::asio;
@@ -27,13 +28,15 @@ TcpServer::~TcpServer() {
 
 void TcpServer::acceptHandler(SessionRef_t session, const boost::system::error_code& error) {
     if (error) {
-        Util::output("TcpServer", "acceptHandler error: ", error.message());
+        Resource::GetResource()->GetLogger().error("TcpServer", "acceptHandler error");
+        Resource::GetResource()->GetLogger().errorStream << error.message();
         m_acceptor.get_io_service().stop();
         return;
     }
     startAccept();
 
-    Util::output("TcpServer", "connection arrived");
+//    Util::output("TcpServer", "connection arrived");
+    Resource::GetResource()->GetLogger().info("TcpServer", "connection arrived");
     session->readHeader();
 }
 

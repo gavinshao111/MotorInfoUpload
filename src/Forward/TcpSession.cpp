@@ -70,6 +70,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     m_timer.cancel();
     if (error) {
         if (m_vinStr.compare(VinInital) != 0) {
+            std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
             std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << std::endl;
         }
@@ -77,9 +78,10 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
         if (error == error::operation_aborted) {
             std::cout << "read operation canceled may because time out" << std::endl;
         } else {
-            Util::output("TcpSession", "readHeaderHandler error: ", error.message());
-            std::cout << "error code: " << error.value() << std::endl;
-            std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
+            Resource::GetResource()->GetLogger().error("TcpSession::readHeaderHandler");
+            Resource::GetResource()->GetLogger().errorStream << "message: " << error.message() << ", error code: " << error.value();
+            //            Util::output("TcpSession", "readHeaderHandler error: ", error.message());
+            //            std::cout << "error code: " << error.value() << std::endl;
         }
         return;
     }
@@ -102,7 +104,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
 
 void TcpSession::readDataUnit() {
     m_dataUnitLen = boost::asio::detail::socket_ops::network_to_host_short(m_hdr->dataUnitLength);
-    std::cout << "get dataUnitLen: " << m_dataUnitLen << std::endl;
+    //    std::cout << "get dataUnitLen: " << m_dataUnitLen << std::endl;
     //    m_packetRef = boost::make_shared<bytebuf::ByteBuffer>(sizeof(DataPacketHeader) + m_dataUnitLen + 1);
 
     m_timer.expires_from_now(boost::posix_time::seconds(m_heartBeatCycle));
@@ -121,6 +123,7 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
     m_timer.cancel();
     if (error) {
         if (m_vinStr.compare(VinInital) != 0) {
+            std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
             std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << std::endl;
         }
@@ -128,9 +131,10 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         if (error == error::operation_aborted) {
             std::cout << "read operation canceled may because time out" << std::endl;
         } else {
-            Util::output("TcpSession", "readDataUnitHandler error: ", error.message());
-            std::cout << "error code: " << error.value() << std::endl;
-            std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
+            Resource::GetResource()->GetLogger().error("TcpSession::readDataUnitHandler");
+            Resource::GetResource()->GetLogger().errorStream << "message: " << error.message() << ", error code: " << error.value();
+            //            Util::output("TcpSession", "readDataUnitHandler error: ", error.message());
+            //            std::cout << "error code: " << error.value() << std::endl;
         }
         return;
     }
@@ -139,7 +143,9 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
     try {
         parseDataUnit();
     } catch (std::runtime_error& e) {
-        Util::output("TcpSession", "dealData error: ", e.what());
+        Resource::GetResource()->GetLogger().error("TcpSession exception");
+        Resource::GetResource()->GetLogger().errorStream << e.what();
+        //        Util::output("TcpSession", "dealData error: ", e.what());
     }
     if (!m_quit)
         readHeader();
@@ -163,8 +169,10 @@ void TcpSession::write(const bytebuf::ByteBuffer& src, const size_t& offset, con
 void TcpSession::writeHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     // 此时对方关闭socket，m_socket.is_open()仍为true error == error::broken_pipe
     if (error) {
-        Util::output("TcpSession", " writeHandler error: ", error.message());
-        std::cout << "error code: " << error.value() << std::endl;
+        Resource::GetResource()->GetLogger().error("TcpSession::writeHandler");
+        Resource::GetResource()->GetLogger().errorStream << "message: " << error.message() << ", error code: " << error.value();
+        //        Util::output("TcpSession", " writeHandler error: ", error.message());
+        //        std::cout << "error code: " << error.value() << std::endl;
         std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (m_vinStr.compare(VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
@@ -172,15 +180,18 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
         }
         return;
     }
-    m_stream.str("");
-    m_stream << bytes_transferred << " bytes sent";
-    Util::output(m_vinStr, m_stream.str());
+    //    m_stream.str("");
+    //    m_stream << bytes_transferred << " bytes sent to vehicle";
+    //    Util::output(m_vinStr, m_stream.str());
+    Resource::GetResource()->GetLogger().info(m_vinStr);
+    Resource::GetResource()->GetLogger().infoStream << bytes_transferred << " bytes sent to vehicle";
 }
 
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
-        Util::output(m_vinStr, " read Timeout");
+        Resource::GetResource()->GetLogger().warn(m_vinStr, "read Timeout");
+        //        Util::output(m_vinStr, "read Timeout");
         m_socket.close();
     }
 }
@@ -189,27 +200,17 @@ void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
 
 void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
-    std::ofstream file;
-    file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
-    m_packetRef->outputAsHex(file);
-
-    file << std::endl;
-    //    file.close();
-
-    BytebufSPtr_t rtData;
     int cmdId = m_hdr->cmdId;
     if (cmdId == enumCmdCode::reissueUpload || cmdId == enumCmdCode::vehicleSignalDataUpload) {
-        rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
+        BytebufSPtr_t rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
 
         try {
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
             // 前6位为采集时间，最后一位为check code
             rtData->put(*m_packetRef, sizeof (TimeForward_t));
-            file << "prase info:" << std::endl;
 
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
-                file << (short) typ << ' ' << (short) m_packetRef->position() << std::endl;
 
                 switch (typ) {
                     case VehicleDataStructInfo::CBV_typeCode:
@@ -269,20 +270,23 @@ void TcpSession::parseDataUnit() {
                 }
             }
         } catch (bytebuf::ByteBufferException& e) {
-            Util::output(m_vinStr, "TcpSession::dealData() error: ", e.what());
-            file.close();
-            throw std::runtime_error("invalid packet format");
+
+            m_stream.str("");
+            m_stream << "invalid packet format\n" << e.what();
+            throw std::runtime_error(m_stream.str());
+            //            Util::output(m_vinStr, "TcpSession::dealData() error: ", e.what());
+            //            throw std::runtime_error("invalid packet format");
         }
-        file.close();
         assert(m_packetRef->remaining() == 1);
         //            throw std::runtime_error("invalid packet format");
 
         if (cmdId == enumCmdCode::vehicleSignalDataUpload && !Resource::GetResource()->GetTcpConnWithPublicPlatform().isConnected())
             ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
-
-        rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position()));
+        uint16_t newDataUnitLength = rtData->position() - sizeof (DataPacketHeader_t);
+        ((DataPacketHeader_t*) rtData->array())->dataUnitLength = htons(newDataUnitLength);
+        rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position() - 2));
         rtData->flip();
-        Resource::GetResource()->GetVehicleDataQueue().put(m_packetRef);
+        Resource::GetResource()->GetVehicleDataQueue().put(rtData);
     } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
         m_packetRef->position(0);
         Resource::GetResource()->GetVehicleDataQueue().put(m_packetRef);

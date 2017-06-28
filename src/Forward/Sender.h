@@ -20,6 +20,7 @@
 #include "../BlockQueue.h"
 #include "GSocket.h"
 #include "ByteBuffer.h"
+#include "Logger.h"
 
 namespace senderstatus {
 
@@ -69,7 +70,7 @@ private:
     
     std::string m_vin;
     DataPacketHeader_t* m_packetHdr;
-    
+    Logger& m_logger;
 };
 
 #endif /* SENDER_H */

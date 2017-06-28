@@ -132,21 +132,21 @@ uint8_t Util::generateBlockCheckCharacter(const bytebuf::ByteBuffer& byteBuffer,
     return generateBlockCheckCharacter(byteBuffer.array() + byteBuffer.position() + offset, size);
 }
 
-void Util::output(const string& id, const string& message) {
-    output(id, message, "");
-}
-void Util::output(const string& id, const string& message1, const string& message2) {
-    output(id, message1, message2, "");
-}
-void Util::output(const string& id, const string& message1, const string& message2, const string& message3) {
-    output(id, message1, message2, message3, "");
-}
-void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4) {
-    output(id, message1, message2, message3, message4, "");
-}
-void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4, const string& message5) {
-    cout << "[" << id << "] " << message1 << message2 << message3 << message4 << message5 << " " << nowtimeStr() << "\n" << endl;
-}
+//void Util::output(const string& id, const string& message) {
+//    output(id, message, "");
+//}
+//void Util::output(const string& id, const string& message1, const string& message2) {
+//    output(id, message1, message2, "");
+//}
+//void Util::output(const string& id, const string& message1, const string& message2, const string& message3) {
+//    output(id, message1, message2, message3, "");
+//}
+//void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4) {
+//    output(id, message1, message2, message3, message4, "");
+//}
+//void Util::output(const string& id, const string& message1, const string& message2, const string& message3, const string& message4, const string& message5) {
+//    cout << "[" << id << "] " << message1 << message2 << message3 << message4 << message5 << " " << nowtimeStr() << "\n" << endl;
+//}
 
 const string& Util::nowtimeStr() {
     time_t now = time(NULL);

@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
         TcpServiceThread.join();
 #endif
     } catch (std::exception &e) {
-        std::string errMsg(e.what());
-        Util::output("ERROR", errMsg);
+        Resource::GetResource()->GetLogger().error("main exception");
+        Resource::GetResource()->GetLogger().errorStream << e.what();
     }
     std::cout << "done." << std::endl;
 
