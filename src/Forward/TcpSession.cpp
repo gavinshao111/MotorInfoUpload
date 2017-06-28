@@ -256,7 +256,10 @@ void TcpSession::parseDataUnit() {
                         size_t sysn = m_packetRef->get();
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(1);
-                            size_t m = ntohs(m_packetRef->getShort()); // 可充电储能温度探针个数
+                            short orig = m_packetRef->getShort();
+                            
+                            std::cout << "REST_typeCode. getShort: " << orig << std::endl;
+                            size_t m = ntohs(orig); // 可充电储能温度探针个数
                             std::cout << "可充电储能温度探针个数: " << m << std::endl;
                             m_packetRef->movePosition(m);
                         }
