@@ -90,12 +90,12 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     std::cout << "[TcpSession::readHeaderHandler] m_hdr->cmdId: " << (int) m_hdr->cmdId << std::endl;
     if (m_vinStr.compare(VinInital) == 0) {
         m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
-//        std::cout << "assign vin, source string: " << m_vinStr <<"\nhex:"<< std::endl;
-//        bytebuf::ByteBuffer vintmp(30);
-//        vintmp.put(m_hdr->vin, 0, sizeof (m_hdr->vin));
-//        vintmp.flip();
-//        vintmp.outputAsHex(std::cout);
-//        std::cout << std::endl;        
+        //        std::cout << "assign vin, source string: " << m_vinStr <<"\nhex:"<< std::endl;
+        //        bytebuf::ByteBuffer vintmp(30);
+        //        vintmp.put(m_hdr->vin, 0, sizeof (m_hdr->vin));
+        //        vintmp.flip();
+        //        vintmp.outputAsHex(std::cout);
+        //        std::cout << std::endl;        
     }
     readDataUnit();
 }
@@ -192,9 +192,9 @@ void TcpSession::parseDataUnit() {
     std::ofstream file;
     file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
     m_packetRef->outputAsHex(file);
-    
+
     file << std::endl;
-//    file.close();
+    //    file.close();
 
     BytebufSPtr_t rtData;
     int cmdId = m_hdr->cmdId;
@@ -206,11 +206,11 @@ void TcpSession::parseDataUnit() {
             // 前6位为采集时间，最后一位为check code
             rtData->put(*m_packetRef, sizeof (TimeForward_t));
             file << "prase info:" << std::endl;
-            
+
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
-                file << (short)typ << (short)m_packetRef->position() <<std::endl;
-                
+                file << (short) typ << ' ' << (short) m_packetRef->position() << std::endl;
+
                 switch (typ) {
                     case VehicleDataStructInfo::CBV_typeCode:
                         rtData->put(*m_packetRef, VehicleDataStructInfo::CBV_size + 1);
@@ -245,27 +245,17 @@ void TcpSession::parseDataUnit() {
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(9);
                             size_t m = m_packetRef->get(); // 本帧单体电池总数
-                            std::cout << "本帧单体电池总数: " << m << std::endl;
                             m_packetRef->movePosition(2 * m);
                         }
                         break;
                     }
                     case VehicleDataStructInfo::REST_typeCode:
                     {
-                        std::cout << "REST_typeCode:" << std::endl;
-                        std::cout << (int)m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                         m_packetRef->movePosition(1);
-                        std::cout << (int)m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                         size_t sysn = m_packetRef->get();
-                        std::cout << (int)m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(1);
-                            std::cout << (int)m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
-                            short orig = m_packetRef->getShort();
-                            
-                            std::cout << "REST_typeCode. getShort: " << orig << std::endl;
-                            size_t m = ntohs(orig); // 可充电储能温度探针个数
-                            std::cout << "可充电储能温度探针个数: " << m << std::endl;
+                            size_t m = ntohs(m_packetRef->getShort()); // 可充电储能温度探针个数
                             m_packetRef->movePosition(m);
                         }
                         break;
@@ -292,6 +282,7 @@ void TcpSession::parseDataUnit() {
 
         rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position()));
         rtData->flip();
+        Resource::GetResource()->GetVehicleDataQueue().put(m_packetRef);
     } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
         m_packetRef->position(0);
         Resource::GetResource()->GetVehicleDataQueue().put(m_packetRef);
