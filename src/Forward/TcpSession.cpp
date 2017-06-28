@@ -90,12 +90,12 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     std::cout << "[TcpSession::readHeaderHandler] m_hdr->cmdId: " << (int) m_hdr->cmdId << std::endl;
     if (m_vinStr.compare(VinInital) == 0) {
         m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
-        std::cout << "assign vin, source string: " << m_vinStr <<"\nhex:"<< std::endl;
-        bytebuf::ByteBuffer vintmp(30);
-        vintmp.put(m_hdr->vin, 0, sizeof (m_hdr->vin));
-        vintmp.flip();
-        vintmp.outputAsHex(std::cout);
-        std::cout << std::endl;        
+//        std::cout << "assign vin, source string: " << m_vinStr <<"\nhex:"<< std::endl;
+//        bytebuf::ByteBuffer vintmp(30);
+//        vintmp.put(m_hdr->vin, 0, sizeof (m_hdr->vin));
+//        vintmp.flip();
+//        vintmp.outputAsHex(std::cout);
+//        std::cout << std::endl;        
     }
     readDataUnit();
 }
@@ -189,10 +189,12 @@ void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
 
 void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
-
+    std::cout << "remaining0: " << m_packetRef->remaining() << std::endl;
     std::ofstream file;
     file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
     m_packetRef->outputAsHex(file);
+    std::cout << "remaining0.1: " << m_packetRef->remaining() << std::endl;
+    
     file << std::endl;
 //    file.close();
 
@@ -202,11 +204,14 @@ void TcpSession::parseDataUnit() {
         rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
 
         try {
+            std::cout << "remaining1: " << m_packetRef->remaining() << std::endl;
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
+            std::cout << "remaining2: " << m_packetRef->remaining() << std::endl;
             // 前6位为采集时间，最后一位为check code
             rtData->put(*m_packetRef, sizeof (TimeForward_t));
-            
+            std::cout << "remaining3: " << m_packetRef->remaining() << std::endl;
             file << "prase info:" << std::endl;
+            
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
                 file << (short)typ << std::endl;
