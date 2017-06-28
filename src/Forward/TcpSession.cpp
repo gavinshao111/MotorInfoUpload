@@ -209,7 +209,8 @@ void TcpSession::parseDataUnit() {
             
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
-                file << (short)typ << std::endl;
+                file << (short)typ << (short)m_packetRef->position() <<std::endl;
+                
                 switch (typ) {
                     case VehicleDataStructInfo::CBV_typeCode:
                         rtData->put(*m_packetRef, VehicleDataStructInfo::CBV_size + 1);
