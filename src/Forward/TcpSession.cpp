@@ -252,10 +252,15 @@ void TcpSession::parseDataUnit() {
                     }
                     case VehicleDataStructInfo::REST_typeCode:
                     {
+                        std::cout << "REST_typeCode:" << std::endl;
+                        std::cout << m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                         m_packetRef->movePosition(1);
+                        std::cout << m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                         size_t sysn = m_packetRef->get();
+                        std::cout << m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(1);
+                            std::cout << m_packetRef->get(m_packetRef->position()) << ' ' << std::endl;
                             short orig = m_packetRef->getShort();
                             
                             std::cout << "REST_typeCode. getShort: " << orig << std::endl;
