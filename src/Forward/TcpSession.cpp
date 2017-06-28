@@ -190,9 +190,10 @@ void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
 void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
 
-//    std::ofstream file;
-//    file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
-//    m_packetRef->outputAsHex(file);
+    std::ofstream file;
+    file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
+    m_packetRef->outputAsHex(file);
+    file << std::endl;
 //    file.close();
 
     BytebufSPtr_t rtData;
@@ -204,8 +205,11 @@ void TcpSession::parseDataUnit() {
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
             // 前6位为采集时间，最后一位为check code
             rtData->put(*m_packetRef, sizeof (TimeForward_t));
+            
+            file << "prase info:" << std::endl;
             for (; m_packetRef->remaining() > 1;) {
                 uint8_t typ = m_packetRef->get(m_packetRef->position());
+                file << (short)typ << std::endl;
                 switch (typ) {
                     case VehicleDataStructInfo::CBV_typeCode:
                         rtData->put(*m_packetRef, VehicleDataStructInfo::CBV_size + 1);
@@ -265,8 +269,10 @@ void TcpSession::parseDataUnit() {
             }
         } catch (bytebuf::ByteBufferException& e) {
             Util::output(m_vinStr, "TcpSession::dealData() error: ", e.what());
+            file.close();
             throw std::runtime_error("invalid packet format");
         }
+        file.close();
         assert(m_packetRef->remaining() == 1);
         //            throw std::runtime_error("invalid packet format");
 
