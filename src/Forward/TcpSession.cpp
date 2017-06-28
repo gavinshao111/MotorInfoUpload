@@ -189,11 +189,9 @@ void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
 
 void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
-    std::cout << "remaining0: " << m_packetRef->remaining() << std::endl;
     std::ofstream file;
     file.open("log/" + m_vinStr + ".txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
     m_packetRef->outputAsHex(file);
-    std::cout << "remaining0.1: " << m_packetRef->remaining() << std::endl;
     
     file << std::endl;
 //    file.close();
@@ -204,12 +202,9 @@ void TcpSession::parseDataUnit() {
         rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
 
         try {
-            std::cout << "remaining1: " << m_packetRef->remaining() << std::endl;
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
-            std::cout << "remaining2: " << m_packetRef->remaining() << std::endl;
             // 前6位为采集时间，最后一位为check code
             rtData->put(*m_packetRef, sizeof (TimeForward_t));
-            std::cout << "remaining3: " << m_packetRef->remaining() << std::endl;
             file << "prase info:" << std::endl;
             
             for (; m_packetRef->remaining() > 1;) {
@@ -249,6 +244,7 @@ void TcpSession::parseDataUnit() {
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(9);
                             size_t m = m_packetRef->get(); // 本帧单体电池总数
+                            std::cout << "本帧单体电池总数: " << m << std::endl;
                             m_packetRef->movePosition(2 * m);
                         }
                         break;
@@ -260,6 +256,7 @@ void TcpSession::parseDataUnit() {
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(1);
                             size_t m = ntohs(m_packetRef->getShort()); // 可充电储能温度探针个数
+                            std::cout << "可充电储能温度探针个数: " << m << std::endl;
                             m_packetRef->movePosition(m);
                         }
                         break;
