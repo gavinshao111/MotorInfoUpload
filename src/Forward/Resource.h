@@ -18,6 +18,7 @@
 #include <map>
 #include <mutex>
 #include <boost/asio.hpp>
+#include <boost/shared_ptr.hpp>
 #include "../BlockQueue.h"
 #include "GSocket.h"
 #include "DataFormatForward.h"
@@ -31,11 +32,11 @@ public:
     virtual ~Resource();
 
     gsocket::GSocket& GetTcpConnWithPublicPlatform() {
-        return TcpConnWithPublicPlatform;
+        return *TcpConnWithPublicPlatformSPtr;
     }
 
     blockqueue::BlockQueue<BytebufSPtr_t>& GetVehicleDataQueue() {
-        return VehicleDataQueue;
+        return *VehicleDataQueueSPtr;
     }
 
     const size_t& GetMaxSerialNumber() const {
@@ -70,8 +71,8 @@ public:
         return ReadResponseTimeOut;
     }
 
-    const int& GetThePlatformTcpServicePort() const {
-        return ThePlatformTcpServicePort;
+    const int& GetEnterprisePlatformTcpServicePort() const {
+        return EnterprisePlatformTcpServicePort;
     }
 
     const std::string& GetPublicServerPassword() const {
@@ -82,14 +83,6 @@ public:
         return PublicServerUserName;
     }
 
-    const int& GetPublicServerPort() const {
-        return PublicServerPort;
-    }
-
-    const std::string& GetPublicServerIp() const {
-        return PublicServerIp;
-    }
-    
     typedef std::map<std::string, SessionRef_t> ConnTable_t;
     
     ConnTable_t& GetVechicleConnTable() {
@@ -118,12 +111,10 @@ private:
     
     static Resource* s_resource;
     
-    std::string PublicServerIp;
-    int PublicServerPort;
     std::string PublicServerUserName;
     std::string PublicServerPassword;
 
-    int ThePlatformTcpServicePort;
+    int EnterprisePlatformTcpServicePort;
 
     /*
      * 等待公共平台回应超时（ReadResponseTimeOut），
@@ -160,8 +151,8 @@ private:
     //    gavinsocket::GSocketClient* tcpConnection;
     size_t MaxSerialNumber;    
 
-    blockqueue::BlockQueue<BytebufSPtr_t> VehicleDataQueue;
-    gsocket::GSocket TcpConnWithPublicPlatform;
+    boost::shared_ptr<blockqueue::BlockQueue<BytebufSPtr_t>> VehicleDataQueueSPtr;
+    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
     
     ConnTable_t VechicleConnTable;
     std::mutex MtxForTable;

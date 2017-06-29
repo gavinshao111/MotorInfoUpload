@@ -44,7 +44,7 @@ namespace blockqueue {
         size_t m_capacity;
     public:
 
-        BlockQueue(size_t capacity) : m_capacity(capacity)  {
+        BlockQueue(const size_t& capacity) : m_capacity(capacity)  {
         }
 
         virtual ~BlockQueue() {

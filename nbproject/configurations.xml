@@ -19,6 +19,7 @@
       <itemPath>src/Util.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles" displayName="资源文件" projectFiles="true">
+      <itemPath>configurtion.ini</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="测试文件"
@@ -61,6 +62,8 @@
           <commandLine>-std=c++0x -lbytebuffer -lgsocket -lboost_thread -lboost_system</commandLine>
         </linkerTool>
       </compileType>
+      <item path="configurtion.ini" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
@@ -112,6 +115,8 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="configurtion.ini" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">

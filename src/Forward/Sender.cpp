@@ -424,7 +424,7 @@ void Sender::tcpSendData(const uint8_t& cmd) {
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);
         m_logger.info("Sender");
-        m_logger.infoStream << sizeToSend << " bytes sent to public server\n";
+        m_logger.infoStream << sizeToSend << " bytes sent to public server" << std::endl;
 //        m_stream.str("Sender: ");
 //        m_stream << sizeToSend << " bytes sent to public server";
 //        Util::output(m_vin, m_stream.str());

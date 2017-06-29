@@ -50,5 +50,5 @@ void Logger::error(const string& id, const string& message) {
     output(errorStream, id, message);
 }
 void Logger::output(ofstream& ofs, const string& id, const string& message) {
-    ofs << "\n[" << id << "] " << message << " " << Util::nowtimeStr() << "\n" << endl;
+    ofs << "\n[" << id << "] " << message << " " << Util::nowtimeStr() << endl;
 }

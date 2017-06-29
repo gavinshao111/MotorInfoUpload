@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 #endif
     } catch (std::exception &e) {
         Resource::GetResource()->GetLogger().error("main exception");
-        Resource::GetResource()->GetLogger().errorStream << e.what();
+        Resource::GetResource()->GetLogger().errorStream << e.what() << std::endl;
     }
     std::cout << "done." << std::endl;
 
@@ -70,6 +70,6 @@ void senderTask() {
 
 void TcpServiceTask() {
     boost::asio::io_service& ioService = Resource::GetResource()->GetIoService();
-    TcpServer tcpServer(ioService, Resource::GetResource()->GetThePlatformTcpServicePort());
+    TcpServer tcpServer(ioService, Resource::GetResource()->GetEnterprisePlatformTcpServicePort());
     ioService.run();
 }
