@@ -3,6 +3,8 @@
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="Forward" displayName="Forward" projectFiles="true">
       <itemPath>src/BlockQueue.h</itemPath>
+      <itemPath>src/Forward/Constant.cpp</itemPath>
+      <itemPath>src/Forward/Constant.h</itemPath>
       <itemPath>src/Forward/DataFormatForward.h</itemPath>
       <itemPath>src/Forward/Logger.cpp</itemPath>
       <itemPath>src/Forward/Logger.h</itemPath>
@@ -68,6 +70,10 @@
       </item>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="src/Forward/Constant.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/Constant.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/Logger.cpp" ex="false" tool="1" flavor2="0">
@@ -124,6 +130,10 @@
       <item path="configurtion.ini" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/BlockQueue.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/Constant.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/Constant.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>

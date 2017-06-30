@@ -45,7 +45,7 @@ private:
     boost::asio::ip::tcp::socket m_socket;
     BytebufSPtr_t m_packetRef;
     bool m_quit;
-    std::string m_vinStr;
+    std::string m_vin;
     DataPacketHeader_t* m_hdr;
     uint16_t m_dataUnitLen;
     boost::asio::deadline_timer m_timer;

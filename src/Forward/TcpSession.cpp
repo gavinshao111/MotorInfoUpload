@@ -25,11 +25,9 @@
 
 #include "../Util.h"
 #include "Resource.h"
+#include "Constant.h"
 
 using namespace boost::asio;
-
-const static int lengthOfPacketLength = 2;
-const static std::string VinInital = "Vin hasn't established";
 
 TcpSession::TcpSession(io_service& ioservice) :
 m_heartBeatCycle(Resource::GetResource()->GetHeartBeatCycle()),
@@ -37,7 +35,7 @@ m_socket(ioservice),
 m_timer(ioservice),
 m_quit(false),
 m_logger(Resource::GetResource()->GetLogger()),
-m_vinStr(VinInital) {
+m_vin(Constant::VinInital) {
 }
 
 TcpSession::~TcpSession() {
@@ -70,9 +68,9 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     // 如果此时对方关闭socket，error.value = 2, message = End of file
     m_timer.cancel();
     if (error) {
-        if (m_vinStr.compare(VinInital) != 0) {
+        if (m_vin.compare(Constant::VinInital) != 0) {
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
+            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
             //            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
         }
 
@@ -88,14 +86,14 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     m_packetRef->position(bytes_transferred);
 
     m_hdr = (DataPacketHeader_t*) m_packetRef->array();
-    if (m_vinStr.compare(VinInital) == 0) {
-        m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
+    if (m_vin.compare(Constant::VinInital) == 0) {
+        m_vin.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
     }
 
     if (m_hdr->cmdId == enumCmdCode::vehicleSignalDataUpload)
-        m_logger.info(m_vinStr, "real time upload");
+        m_logger.info(m_vin, Constant::CmdRealtimeUploadStr);
     else if (m_hdr->cmdId == enumCmdCode::reissueUpload)
-        m_logger.info(m_vinStr, "reissue Upload");
+        m_logger.info(m_vin, Constant::CmdReissueUploadStr);
 
     readDataUnit();
 }
@@ -117,9 +115,9 @@ void TcpSession::readDataUnit() {
 void TcpSession::readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     m_timer.cancel();
     if (error) {
-        if (m_vinStr.compare(VinInital) != 0) {
+        if (m_vin.compare(Constant::VinInital) != 0) {
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
+            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
 //            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
 
@@ -165,8 +163,8 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
         m_logger.error("TcpSession::writeHandler");
         m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
         std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
-        if (m_vinStr.compare(VinInital) != 0) {
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
+        if (m_vin.compare(Constant::VinInital) != 0) {
+            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
 //            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
         return;
@@ -179,7 +177,7 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
-        m_logger.warn(m_vinStr, "read Timeout");
+        m_logger.warn(m_vin, "read Timeout");
         m_socket.close();
     }
 }
@@ -279,10 +277,10 @@ void TcpSession::parseDataUnit() {
         std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (cmdId == enumCmdCode::vehicleLogin) {
             std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;
-            ret = Resource::GetResource()->GetVechicleConnTable().insert(std::pair<std::string, SessionRef_t>(m_vinStr, shared_from_this()));
+            ret = Resource::GetResource()->GetVechicleConnTable().insert(std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
             //            std::cout << "TcpSession::parseDataUnit login insert " << m_vinStr << ": " << ret.second << ' '<< Util::nowTimeStr() << std::endl;
         } else {
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
+            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
             //            std::cout << "TcpSession::parseDataUnit logout erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
             m_quit = true;
         }

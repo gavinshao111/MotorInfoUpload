@@ -23,6 +23,7 @@
 #include "ByteBuffer.h"
 #include "../Util.h"
 #include "Resource.h"
+#include "Constant.h"
 
 #include <iostream>
 
@@ -38,6 +39,7 @@ m_responseBuf(512),
 m_senderStatus(senderstatus::EnumSenderStatus::responseOk),
 s_carDataQueue(Resource::GetResource()->GetVehicleDataQueue()),
 s_publicServer(Resource::GetResource()->GetPublicServer()),
+m_vin(Constant::VinInital),
 m_logger(Resource::GetResource()->GetLogger()) {
     if (Resource::GetResource()->GetPublicServerUserName().length() > sizeof (m_loginData.username)
             || (Resource::GetResource()->GetPublicServerPassword().length() > sizeof (m_loginData.password)))
@@ -353,22 +355,35 @@ void Sender::tcpSendData(const uint8_t& cmd) {
     size_t sizeToSend;
     BytebufSPtr_t dataToSend;
     time_t collectTime;
+    string cmdTypeStr;
     try {
         switch (cmd) {
             case enumCmdCode::platformLogin:
                 dataToSend = boost::make_shared<ByteBuffer>((uint8_t*) & m_loginData, sizeof (LoginDataForward_t));
                 m_loginData.checkCode = Util::generateBlockCheckCharacter(*dataToSend, 2, sizeof (LoginDataForward_t) - 3);
                 collectTime = time(NULL);
+                cmdTypeStr = Constant::CmdPlatformLoginStr;
                 break;
             case enumCmdCode::platformLogout:
                 dataToSend = boost::make_shared<ByteBuffer>((uint8_t*) & m_logoutData, sizeof (LogoutDataForward_t));
                 m_logoutData.checkCode = Util::generateBlockCheckCharacter(*dataToSend, 2, sizeof (LogoutDataForward_t) - 3);
                 collectTime = time(NULL);
+                cmdTypeStr = Constant::CmdPlatformLogoutStr;
                 break;
             case enumCmdCode::vehicleSignalDataUpload:
+                cmdTypeStr = Constant::CmdRealtimeUploadStr;
+                dataToSend = m_carData;
+                break;
             case enumCmdCode::reissueUpload:
+                cmdTypeStr = Constant::CmdReissueUploadStr;
+                dataToSend = m_carData;
+                break;
             case enumCmdCode::vehicleLogin:
+                cmdTypeStr = Constant::CmdVehicleLoginStr;
+                dataToSend = m_carData;
+                break;
             case enumCmdCode::vehicleLogout:
+                cmdTypeStr = Constant::CmdVehicleLogoutStr;
                 dataToSend = m_carData;
                 break;
             default:
@@ -392,8 +407,10 @@ void Sender::tcpSendData(const uint8_t& cmd) {
         // 为了打印日志，将pos指针退回
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);
-        m_logger.info("Sender");
-        m_logger.infoStream << sizeToSend << " bytes sent to public server" << std::endl;
+        
+        m_stream.str("");
+        m_stream << sizeToSend << " bytes of " << cmdTypeStr << " data uploaded";
+        m_logger.info(m_vin, m_stream.str());
 
         ofstream file;
         file.open("log/message.txt", ofstream::out | ofstream::binary);

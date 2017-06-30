@@ -35,6 +35,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/src/Forward/Constant.o \
 	${OBJECTDIR}/src/Forward/Logger.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
 	${OBJECTDIR}/src/Forward/PublicServer.o \
@@ -67,6 +68,11 @@ LDLIBSOPTIONS=-L../GavinLib/ByteBuffer/dist -L../GavinLib/GSocket/dist
 
 motorinfoupload: ${OBJECTFILES}
 	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgsocket -lboost_thread -lboost_system
+
+${OBJECTDIR}/src/Forward/Constant.o: src/Forward/Constant.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Constant.o src/Forward/Constant.cpp
 
 ${OBJECTDIR}/src/Forward/Logger.o: src/Forward/Logger.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
