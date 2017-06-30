@@ -182,6 +182,7 @@ void Sender::forwardCarData() {
             setupConnAndLogin();
         }
         m_senderStatus = senderstatus::EnumSenderStatus::init;
+        m_packetHdr = (DataPacketHeader_t*) m_carData->array(); // Login 后 read response, m_packetHdr 指向回应包的头部，再次指向转发包的头部
         tcpSendData(m_packetHdr->cmdId);
         if (m_senderStatus == senderstatus::EnumSenderStatus::connectionClosed) {
             resend = true;
@@ -322,9 +323,6 @@ void Sender::updateLoginData() {
     m_loginData.time.sec = nowTM->tm_sec;
     m_loginData.serialNumber = m_serialNumber;
     m_loginData.serialNumber = boost::asio::detail::socket_ops::host_to_network_short(m_serialNumber);
-
-//    m_packetHdr = &m_loginData.header;
-//    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
 }
 
 void Sender::updateLogoutData() {
@@ -340,9 +338,6 @@ void Sender::updateLogoutData() {
     m_logoutData.time.min = nowTM->tm_min;
     m_logoutData.time.sec = nowTM->tm_sec;
     m_logoutData.serialNumber = m_loginData.serialNumber;
-
-//    m_packetHdr = &m_logoutData.header;
-//    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
 }
 
 /**
