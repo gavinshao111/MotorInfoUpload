@@ -323,8 +323,8 @@ void Sender::updateLoginData() {
     m_loginData.serialNumber = m_serialNumber;
     m_loginData.serialNumber = boost::asio::detail::socket_ops::host_to_network_short(m_serialNumber);
 
-    m_packetHdr = &m_loginData.header;
-    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
+//    m_packetHdr = &m_loginData.header;
+//    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
 }
 
 void Sender::updateLogoutData() {
@@ -341,8 +341,8 @@ void Sender::updateLogoutData() {
     m_logoutData.time.sec = nowTM->tm_sec;
     m_logoutData.serialNumber = m_loginData.serialNumber;
 
-    m_packetHdr = &m_logoutData.header;
-    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
+//    m_packetHdr = &m_logoutData.header;
+//    m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
 }
 
 /**
@@ -434,6 +434,7 @@ void Sender::readResponse(const int& timeout) {
     TimeForward_t* responseTime;
 
     m_responseBuf.clear();
+    uint16_t responseDataUnitLen;
     DataPacketHeader_t* packetHdrTmp = (DataPacketHeader_t*) m_responseBuf.array();
     try {
         s_publicServer.Read(m_responseBuf, 2, timeout * 1000);
@@ -444,16 +445,16 @@ void Sender::readResponse(const int& timeout) {
 
         s_publicServer.Read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000);
         m_vin.assign((char*) packetHdrTmp->vin, sizeof (packetHdrTmp->vin));
-        packetHdrTmp->dataUnitLength = boost::asio::detail::socket_ops::network_to_host_short(
+        responseDataUnitLen = boost::asio::detail::socket_ops::network_to_host_short(
                 packetHdrTmp->dataUnitLength);
 
-        if (packetHdrTmp->dataUnitLength > m_responseBuf.remaining()) {
+        if (responseDataUnitLen > m_responseBuf.remaining()) {
             m_logger.warn("Sender::readResponse");
-            m_logger.warnStream << "Illegal responseHdr->dataUnitLength: " << packetHdrTmp->dataUnitLength << std::endl;
+            m_logger.warnStream << "Illegal responseHdr->responseDataUnitLength: " << responseDataUnitLen << std::endl;
             m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
             return;
         }
-        s_publicServer.Read(m_responseBuf, packetHdrTmp->dataUnitLength + 1, timeout * 1000000);
+        s_publicServer.Read(m_responseBuf, responseDataUnitLen + 1, timeout * 1000000);
     } catch (SocketTimeoutException& e) {
         m_senderStatus = senderstatus::EnumSenderStatus::timeout;
         return;
@@ -473,10 +474,10 @@ void Sender::readResponse(const int& timeout) {
         m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
         return;
     }
-    if (packetHdrTmp->dataUnitLength != sizeof (TimeForward_t)) {
+    if (responseDataUnitLen != sizeof (TimeForward_t)) {
         m_logger.warn(m_vin);
-        m_logger.warnStream << "dataUnitLength in public server's response expected to 6, actually is " 
-                << packetHdrTmp->dataUnitLength << std::endl;
+        m_logger.warnStream << "responseDataUnitLength in public server's response expected to 6, actually is " 
+                << responseDataUnitLen << std::endl;
         m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
         return;
     }
