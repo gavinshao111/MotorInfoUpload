@@ -24,6 +24,7 @@ public:
     virtual ~TcpServer();
 
 private:
+    TcpServer(const TcpServer&);
     void startAccept();
     void acceptHandler(SessionRef_t session, const boost::system::error_code& error);
 

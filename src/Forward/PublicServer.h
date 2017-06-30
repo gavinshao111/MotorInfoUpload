@@ -21,7 +21,6 @@
 class PublicServer {
 public:
     PublicServer();
-    PublicServer(const PublicServer& orig);
     virtual ~PublicServer();
 
     void Close();
@@ -35,6 +34,7 @@ public:
     
     void setConnectionOption(const std::string& ip, const int& port);
 private:
+    PublicServer(const PublicServer& orig);
     boost::shared_ptr<gsocket::GSocket> m_socketSPtr;
     std::string m_ip;
     int m_port;

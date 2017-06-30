@@ -19,6 +19,7 @@
 #include <string>
 #include "ByteBuffer.h"
 #include "DataFormatForward.h"
+#include "Logger.h"
 
 
 class TcpServer;
@@ -33,6 +34,7 @@ public:
     void write(const bytebuf::ByteBuffer& src, const size_t& offset, const size_t& length);
 private:
     TcpSession(boost::asio::io_service&);
+    TcpSession(const TcpSession&);
     void readDataUnit();
     void readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred);
     void readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred);
@@ -49,6 +51,7 @@ private:
     boost::asio::deadline_timer m_timer;
     size_t m_heartBeatCycle;
     std::stringstream m_stream;
+    Logger& m_logger;
 
     friend class TcpServer;
 

@@ -21,7 +21,6 @@ PublicServer::PublicServer() : m_ip(""), m_port(0) {
 }
 
 PublicServer::PublicServer(const PublicServer& orig) {
-    throw runtime_error("PublicServer copy constructor must not be called");
 }
 
 PublicServer::~PublicServer() {
