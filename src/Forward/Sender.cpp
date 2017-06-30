@@ -88,7 +88,7 @@ void Sender::run() {
             }
             m_packetHdr = (DataPacketHeader_t*) m_carData->array();
             m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
-            m_logger.info(m_vin, "Sender get vehicle data from data queue");
+//            m_logger.info(m_vin, "Sender get vehicle data from data queue");
 
             forwardCarData();
         }
@@ -151,6 +151,7 @@ void Sender::setupConnection() {
         return;
 
     s_publicServer.Close();
+    s_publicServer.Connect();
     for (; !s_publicServer.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
         m_logger.warn("Sender", "connect refused by Public Server. Reconnecting...");
         s_publicServer.Connect();
@@ -395,7 +396,7 @@ void Sender::tcpSendData(const uint8_t& cmd) {
         m_logger.infoStream << sizeToSend << " bytes sent to public server" << std::endl;
 
         ofstream file;
-        file.open("log/message.txt", ofstream::out | ofstream::app | ofstream::binary);
+        file.open("log/message.txt", ofstream::out | ofstream::binary);
         outputMsg(file, m_vin, collectTime, m_lastSendTime, dataToSend.get());
         file.close();
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出

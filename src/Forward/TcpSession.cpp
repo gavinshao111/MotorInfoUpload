@@ -43,7 +43,7 @@ m_vinStr(VinInital) {
 TcpSession::~TcpSession() {
     // deadline_timer的析构函数什么也不做，因此不会导致发出的async_wait被cancel。
     m_timer.cancel();
-    std::cout << m_vinStr << ": TcpSession destructed" << ' ' << Util::nowTimeStr() << std::endl;
+//    std::cout << m_vinStr << ": TcpSession destructed" << ' ' << Util::nowTimeStr() << std::endl;
 }
 
 ip::tcp::socket& TcpSession::socket() {
@@ -92,27 +92,10 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
         m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
     }
 
-    m_stream.str("");
-    switch (m_hdr->cmdId) {
-        case enumCmdCode::heartBeat:
-            m_stream << "heartBeat";
-            break;
-        case enumCmdCode::reissueUpload:
-            m_stream << "reissue Upload";
-            break;
-        case enumCmdCode::vehicleLogin:
-            m_stream << "vehicle Login";
-            break;
-        case enumCmdCode::vehicleLogout:
-            m_stream << "vehicle Logout";
-            break;
-        case enumCmdCode::vehicleSignalDataUpload:
-            m_stream << "real time upload";
-            break;
-        default:
-            m_stream << (int) m_hdr->cmdId;
-    }
-    m_logger.info(m_vinStr, m_stream.str());
+    if (m_hdr->cmdId == enumCmdCode::vehicleSignalDataUpload)
+        m_logger.info(m_vinStr, "real time upload");
+    else if (m_hdr->cmdId == enumCmdCode::reissueUpload)
+        m_logger.info(m_vinStr, "reissue Upload");
 
     readDataUnit();
 }
@@ -137,11 +120,11 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         if (m_vinStr.compare(VinInital) != 0) {
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
+//            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
 
         if (error == error::operation_aborted) {
-            std::cout << "read operation canceled may because time out" << ' ' << Util::nowTimeStr() << std::endl;
+            m_logger.info("TcpSession::readHeaderHandler", "read operation canceled may because time out");
         } else {
             m_logger.error("TcpSession::readDataUnitHandler");
             m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
@@ -184,13 +167,13 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
         std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (m_vinStr.compare(VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
+//            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
         return;
     }
-    m_stream.str("");
-    m_stream << bytes_transferred << " bytes sent to vehicle";
-    m_logger.info(m_vinStr, m_stream.str());
+//    m_stream.str("");
+//    m_stream << bytes_transferred << " bytes sent to vehicle";
+//    m_logger.info(m_vinStr, m_stream.str());
 }
 
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
