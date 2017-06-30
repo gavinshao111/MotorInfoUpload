@@ -18,7 +18,8 @@
 #include <fstream>
 #include "DataFormatForward.h"
 #include "../BlockQueue.h"
-#include "GSocket.h"
+//#include "GSocket.h"
+#include "PublicServer.h"
 #include "ByteBuffer.h"
 #include "Logger.h"
 
@@ -57,7 +58,8 @@ private:
     void static outputMsg(std::ostream& out, const std::string& vin, const time_t& collectTime, const time_t& sendTime, const bytebuf::ByteBuffer* data = NULL);
 
     blockqueue::BlockQueue<BytebufSPtr_t>&  s_carDataQueue;
-    gsocket::GSocket& s_tcpConn;
+//    gsocket::GSocket& s_tcpConn;
+    PublicServer& s_publicServer;
     LoginDataForward_t m_loginData;
     LogoutDataForward_t m_logoutData;
     boost::shared_ptr<bytebuf::ByteBuffer> m_carData;

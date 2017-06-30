@@ -20,10 +20,11 @@
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 #include "../BlockQueue.h"
-#include "GSocket.h"
+//#include "GSocket.h"
 #include "DataFormatForward.h"
 #include "TcpSession.h"
 #include "Logger.h"
+#include "PublicServer.h"
 
 class Resource {
 public:
@@ -31,8 +32,11 @@ public:
     static Resource* GetResource();
     virtual ~Resource();
 
-    gsocket::GSocket& GetTcpConnWithPublicPlatform() {
-        return *TcpConnWithPublicPlatformSPtr;
+//    gsocket::GSocket& GetTcpConnWithPublicPlatform() {
+//        return *TcpConnWithPublicPlatformSPtr;
+//    }
+    PublicServer& GetPublicServer() {
+        return publicServer;
     }
 
     blockqueue::BlockQueue<BytebufSPtr_t>& GetVehicleDataQueue() {
@@ -152,7 +156,8 @@ private:
     size_t MaxSerialNumber;    
 
     boost::shared_ptr<blockqueue::BlockQueue<BytebufSPtr_t>> VehicleDataQueueSPtr;
-    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
+//    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
+    PublicServer publicServer;
     
     ConnTable_t VechicleConnTable;
     std::mutex MtxForTable;

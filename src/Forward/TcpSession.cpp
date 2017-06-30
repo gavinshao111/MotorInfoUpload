@@ -302,7 +302,7 @@ void TcpSession::parseDataUnit() {
         assert(m_packetRef->remaining() == 1);
         //            throw std::runtime_error("invalid packet format");
 
-        if (cmdId == enumCmdCode::vehicleSignalDataUpload && !Resource::GetResource()->GetTcpConnWithPublicPlatform().isConnected())
+        if (cmdId == enumCmdCode::vehicleSignalDataUpload && !Resource::GetResource()->GetPublicServer().isConnected())
             ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
         uint16_t newDataUnitLength = rtData->position() - sizeof (DataPacketHeader_t);
         ((DataPacketHeader_t*) rtData->array())->dataUnitLength = htons(newDataUnitLength);

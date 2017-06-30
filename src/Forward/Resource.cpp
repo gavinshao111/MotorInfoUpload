@@ -77,8 +77,10 @@ Resource::Resource()
     LoginIntervals = pt.get<int>(section + ".LoginIntervals", 1);
     LoginIntervals2 = pt.get<int>(section + ".LoginIntervals2", 1);
     ReSetupPeroid = pt.get<int>(section + ".ReSetupPeroid", 1);
-    
-    TcpConnWithPublicPlatformSPtr = boost::make_shared<gsocket::GSocket>(PublicServerIp, PublicServerPort);
+//    try {
+//        TcpConnWithPublicPlatformSPtr = boost::make_shared<gsocket::GSocket>(PublicServerIp, PublicServerPort);
+//    } catch (gsocket::SocketConnectRefusedException& e) {}
+    publicServer.setConnectionOption(PublicServerIp, PublicServerPort);
     VehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue<BytebufSPtr_t>>(MaxVehicleDataQueueSize);
 }
 

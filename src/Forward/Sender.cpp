@@ -22,7 +22,7 @@
 #include <bits/basic_string.h>
 #include "ByteBuffer.h"
 #include "../Util.h"
-#include "GSocket.h"
+//#include "GSocket.h"
 #include "Resource.h"
 
 #include <iostream>
@@ -38,7 +38,8 @@ m_lastSendTime(0),
 m_responseBuf(512),
 m_senderStatus(senderstatus::EnumSenderStatus::responseOk),
 s_carDataQueue(Resource::GetResource()->GetVehicleDataQueue()),
-s_tcpConn(Resource::GetResource()->GetTcpConnWithPublicPlatform()),
+//s_tcpConn(Resource::GetResource()->GetTcpConnWithPublicPlatform()),
+s_publicServer(Resource::GetResource()->GetPublicServer()),
 m_logger(Resource::GetResource()->GetLogger()) {
     if (Resource::GetResource()->GetPublicServerUserName().length() > sizeof (m_loginData.username)
             || (Resource::GetResource()->GetPublicServerPassword().length() > sizeof (m_loginData.password)))
@@ -104,7 +105,7 @@ void Sender::run() {
         m_logger.errorStream << e.what() << std::endl;
 //        Util::output("ERROR", e.what());
     }
-    s_tcpConn.Close();
+    s_publicServer.Close();
     m_logger.info("DONE", "Sender quiting...");
 //    Util::output("DONE", "Sender quiting...");
 }
@@ -127,8 +128,8 @@ void Sender::runForCarCompliance() {
             setupConnAndLogin(false);
             logout();
         }
-        m_logger.info("Sender", "login logout 5 times done");
-//        Util::output("INFO", "Sender: login logout 5 times done");
+        m_logger.info("Sender", "login logout 5 times done ");
+//        Util::output("INFO", "Sender: login logout 5 times done ");
 
         // 转发测试前先清空 dataQueue
         s_carDataQueue.clear();
@@ -155,20 +156,20 @@ void Sender::runForCarCompliance() {
         m_logger.errorStream << e.what() << std::endl;        
 //        Util::output("ERROR", e.what());
     }
-    s_tcpConn.Close();
+    s_publicServer.Close();
     m_logger.info("DONE", "Sender quiting...");    
 //    Util::output("DONE", "Sender quiting...");
 }
 
 void Sender::setupConnection() {
-    if (s_tcpConn.isConnected())
+    if (s_publicServer.isConnected())
         return;
 
-    s_tcpConn.Close();
-    for (; !s_tcpConn.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
+    s_publicServer.Close();
+    for (; !s_publicServer.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
         m_logger.warn("Sender", "connect refused by Public Server. Reconnecting...");
 //        Util::output("WARN", "Sender connect refused by Public Server. Reconnecting...");
-        s_tcpConn.Connect();
+        s_publicServer.Connect();
     }
     m_logger.info("Sender", "connection with public platform established");
 //    Util::output("INFO", "Sender connection with public platform established");
@@ -191,7 +192,7 @@ void Sender::forwardCarData() {
     bool resend;
     do {
         resend = false;
-        if (!s_tcpConn.isConnected()) {
+        if (!s_publicServer.isConnected()) {
             setupConnAndLogin();
         }
         m_senderStatus = senderstatus::EnumSenderStatus::init;
@@ -267,7 +268,7 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
         resend = true;
         i++;
         //    for (size_t i = 1;; i++) {
-        if (!s_tcpConn.isConnected()) {
+        if (!s_publicServer.isConnected()) {
             setupConnection();
         }
 
@@ -289,7 +290,7 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
         tcpSendData(enumCmdCode::platformLogin);
         if (!needResponse)
             break;
-        m_logger.info("Sender", "waiting for public server's response...\n");
+        m_logger.info("Sender", "waiting for public server's response...");
 //        cout << "[DEBUG] Sender: waiting for public server's response...\n" << endl;
         readResponse(Resource::GetResource()->GetReadResponseTimeOut());
 
@@ -324,17 +325,13 @@ void Sender::setupConnAndLogin(const bool& needResponse/* = true*/) {
 
     m_serialNumber++;
     m_lastloginTime = time(NULL);
-#if DEBUG
-    cout << "[INFO] Sender: login done\n" << endl;
-#endif
+    cout << "[Sender] platform login done " << Util::nowtimeStr() << endl;
 }
 
 void Sender::logout() {
     updateLogoutData();
     tcpSendData(enumCmdCode::platformLogout);
-#if DEBUG
-    cout << "[INFO] Sender: logout done\n" << endl;
-#endif
+    cout << "[Sender] platform logout done " << Util::nowtimeStr() << endl;
 }
 
 void Sender::updateLoginData() {
@@ -419,7 +416,7 @@ void Sender::tcpSendData(const uint8_t& cmd) {
         collectTime = mktime(&timeTM);
 
         sizeToSend = dataToSend->remaining();
-        s_tcpConn.Write(*dataToSend);
+        s_publicServer.Write(*dataToSend);
         // 为了打印日志，将pos指针退回
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);
@@ -433,7 +430,7 @@ void Sender::tcpSendData(const uint8_t& cmd) {
         file.open("log/message.txt", ofstream::out | ofstream::app | ofstream::binary);
         outputMsg(file, m_vin, collectTime, m_lastSendTime, dataToSend.get());
         file.close();
-        //        Util::output(m_vin, "[DEBUG] Sender: sent data write to log ... done");
+        //        Util::output(m_vin, "[DEBUG] Sender: sent data write to log ... done ");
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         m_logger.warn("Sender::tcpSendData exception");
         m_logger.warnStream << e.what() << std::endl;
@@ -455,13 +452,13 @@ void Sender::readResponse(const int& timeout) {
     m_responseBuf.clear();
     DataPacketHeader_t* packetHdrTmp = (DataPacketHeader_t*) m_responseBuf.array();
     try {
-        s_tcpConn.Read(m_responseBuf, 2, timeout * 1000);
+        s_publicServer.Read(m_responseBuf, 2, timeout * 1000);
         if (packetHdrTmp->startCode[0] != '#' || packetHdrTmp->startCode[1] != '#') {
             m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
             return;
         }
 
-        s_tcpConn.Read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000);
+        s_publicServer.Read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000);
         m_vin.assign((char*) packetHdrTmp->vin, sizeof (packetHdrTmp->vin));
         packetHdrTmp->dataUnitLength = boost::asio::detail::socket_ops::network_to_host_short(
                 packetHdrTmp->dataUnitLength);
@@ -475,7 +472,7 @@ void Sender::readResponse(const int& timeout) {
             m_senderStatus = senderstatus::EnumSenderStatus::responseFormatErr;
             return;
         }
-        s_tcpConn.Read(m_responseBuf, packetHdrTmp->dataUnitLength + 1, timeout * 1000000);
+        s_publicServer.Read(m_responseBuf, packetHdrTmp->dataUnitLength + 1, timeout * 1000000);
     } catch (SocketTimeoutException& e) {
         m_senderStatus = senderstatus::EnumSenderStatus::timeout;
         return;

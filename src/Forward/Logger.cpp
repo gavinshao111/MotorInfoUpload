@@ -19,7 +19,8 @@ using namespace std;
 Logger::Logger() {
     infoStream.open("log/info.txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
     warnStream.open("log/warn.txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
-    errorStream.open("log/error.txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
+//    errorStream.open("log/error.txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
+    errorStream.open("log/warn.txt", std::ofstream::out | std::ofstream::app | std::ofstream::binary);
 }
 
 Logger::Logger(const Logger& orig) {
