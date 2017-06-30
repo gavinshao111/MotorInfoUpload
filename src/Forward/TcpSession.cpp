@@ -43,7 +43,7 @@ m_vinStr(VinInital) {
 TcpSession::~TcpSession() {
     // deadline_timer的析构函数什么也不做，因此不会导致发出的async_wait被cancel。
     m_timer.cancel();
-    std::cout << m_vinStr << ": TcpSession destructed" << ' '<< Util::nowTimeStr() << std::endl;
+    std::cout << m_vinStr << ": TcpSession destructed" << ' ' << Util::nowTimeStr() << std::endl;
 }
 
 ip::tcp::socket& TcpSession::socket() {
@@ -73,7 +73,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
         if (m_vinStr.compare(VinInital) != 0) {
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-//            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
+            //            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
         }
 
         if (error == error::operation_aborted) {
@@ -91,7 +91,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     if (m_vinStr.compare(VinInital) == 0) {
         m_vinStr.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
     }
-    
+
     m_stream.str("");
     switch (m_hdr->cmdId) {
         case enumCmdCode::heartBeat:
@@ -113,7 +113,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
             m_stream << (int) m_hdr->cmdId;
     }
     m_logger.info(m_vinStr, m_stream.str());
-    
+
     readDataUnit();
 }
 
@@ -137,11 +137,11 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         if (m_vinStr.compare(VinInital) != 0) {
             std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
+            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
 
         if (error == error::operation_aborted) {
-            std::cout << "read operation canceled may because time out" << ' '<< Util::nowTimeStr() << std::endl;
+            std::cout << "read operation canceled may because time out" << ' ' << Util::nowTimeStr() << std::endl;
         } else {
             m_logger.error("TcpSession::readDataUnitHandler");
             m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
@@ -184,7 +184,7 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
         std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (m_vinStr.compare(VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
+            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
         return;
     }
@@ -279,8 +279,9 @@ void TcpSession::parseDataUnit() {
             m_stream.str("");
             m_stream << "invalid packet format\n" << e.what();
             throw std::runtime_error(m_stream.str());
-       }
-        throw std::runtime_error("invalid packet format");
+        }
+        if (m_packetRef->remaining() != 1)
+            throw std::runtime_error("invalid packet format: m_packetRef->remaining expect to be 1 after parse data unit");
 
         if (cmdId == enumCmdCode::vehicleSignalDataUpload && !Resource::GetResource()->GetPublicServer().isConnected())
             ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
@@ -296,10 +297,10 @@ void TcpSession::parseDataUnit() {
         if (cmdId == enumCmdCode::vehicleLogin) {
             std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;
             ret = Resource::GetResource()->GetVechicleConnTable().insert(std::pair<std::string, SessionRef_t>(m_vinStr, shared_from_this()));
-//            std::cout << "TcpSession::parseDataUnit login insert " << m_vinStr << ": " << ret.second << ' '<< Util::nowTimeStr() << std::endl;
+            //            std::cout << "TcpSession::parseDataUnit login insert " << m_vinStr << ": " << ret.second << ' '<< Util::nowTimeStr() << std::endl;
         } else {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vinStr);
-//            std::cout << "TcpSession::parseDataUnit logout erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
+            //            std::cout << "TcpSession::parseDataUnit logout erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
             m_quit = true;
         }
     } else if (cmdId == enumCmdCode::heartBeat) {
