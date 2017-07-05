@@ -32,13 +32,6 @@ public:
     static Resource* GetResource();
     virtual ~Resource();
 
-//    gsocket::GSocket& GetTcpConnWithPublicPlatform() {
-//        return *TcpConnWithPublicPlatformSPtr;
-//    }
-    PublicServer& GetPublicServer() {
-        return publicServer;
-    }
-
     blockqueue::BlockQueue<BytebufSPtr_t>& GetVehicleDataQueue() {
         return *VehicleDataQueueSPtr;
     }
@@ -87,6 +80,14 @@ public:
         return PublicServerUserName;
     }
 
+    const int& GetPublicServerPort() const {
+        return PublicServerPort;
+    }
+
+    const std::string& GetPublicServerIp() const {
+        return PublicServerIp;
+    }
+    
     typedef std::map<std::string, SessionRef_t> ConnTable_t;
     
     ConnTable_t& GetVechicleConnTable() {
@@ -97,7 +98,7 @@ public:
         return MtxForTable;
     }
 
-    size_t GetHeartBeatCycle() const {
+    const size_t& GetHeartBeatCycle() const {
         return HeartBeatCycle;
     }
 
@@ -109,12 +110,21 @@ public:
         return logger;
     }
 
+    const size_t& GetUploadChannelNumber() const {
+        return UploadChannelNumber;
+    }
+
+    const uint8_t& GetMode() const {
+        return Mode;
+    }
 
 private:
     Resource();
     
     static Resource* s_resource;
     
+    std::string PublicServerIp;
+    int PublicServerPort;
     std::string PublicServerUserName;
     std::string PublicServerPassword;
 
@@ -154,15 +164,17 @@ private:
 
     //    gavinsocket::GSocketClient* tcpConnection;
     size_t MaxSerialNumber;    
+    size_t HeartBeatCycle;  // 车机与我平台的默认心跳周期
+    size_t UploadChannelNumber;
+    
+    uint8_t Mode;
 
     boost::shared_ptr<blockqueue::BlockQueue<BytebufSPtr_t>> VehicleDataQueueSPtr;
 //    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
-    PublicServer publicServer;
     
     ConnTable_t VechicleConnTable;
     std::mutex MtxForTable;
     
-    size_t HeartBeatCycle;  // 车机与我平台的默认心跳周期
     boost::asio::io_service IoService;
     Logger logger;
 };

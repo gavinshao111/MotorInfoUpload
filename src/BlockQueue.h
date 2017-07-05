@@ -58,7 +58,7 @@ namespace blockqueue {
             return m_queue.empty();
         }
 
-        void put(const DataT& data) {
+        void put(const DataT& data, const bool& front = false) {
 #if UseBoostMutex
             boost::unique_lock<boost::mutex> lk(m_mutex);
 #else
@@ -68,7 +68,11 @@ namespace blockqueue {
                 //                std::cout << "BlockQueue::queue is full, put is blocking." << std::endl;
                 m_notFull.wait(lk);
             }
-            m_queue.push_back(data);
+            if (front)
+                m_queue.push_front(data);
+            else
+                m_queue.push_back(data);
+            
             m_notEmpty.notify_one();
         }
 

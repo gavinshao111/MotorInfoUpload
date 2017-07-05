@@ -17,18 +17,13 @@
 
 using namespace std;
 
-PublicServer::PublicServer() : m_ip(""), m_port(0) {
+PublicServer::PublicServer(const string& ip, const int& port) : m_ip(ip), m_port(port) {
 }
 
 PublicServer::PublicServer(const PublicServer& orig) {
 }
 
 PublicServer::~PublicServer() {
-}
-
-void PublicServer::setConnectionOption(const string& ip, const int& port) {
-    m_ip = ip;
-    m_port = port;
 }
 
 void PublicServer::Close() {

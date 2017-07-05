@@ -1,12 +1,22 @@
+/**
+ * To do:
+ * 1. 国标2：如车辆登出/平台登出/异常下线后需重新发送车辆登入
+ * 当与公共平台重连后，平台重新登录，而车机不会发生登录数据，是否需要代发车机登录数据？
+ * 2. 退出前发送平台登出数据
+ */
+
+
 #include <cstdlib>
 #include <iostream>
+#include <vector>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include"DataFormatForward.h"
-#include "Sender.h"
 #include "TcpServer.h"
 #include "Resource.h"
 #include "../Util.h"
+#include "Uploader.h"
+#include "Constant.h"
 //#include "glog/logging.h"
 
 /*
@@ -19,25 +29,36 @@
  * 企业平台需要转发上级平台发来的车辆登录反馈给车机
  */
 
-void senderTask();
-void TcpServiceTask();
+void uploadTask(const size_t& no);
+void tcpServiceTask();
 
 int main(int argc, char** argv) {
     try {
         Resource::GetResource();
-        
-        boost::thread SenderThread(senderTask);
-        boost::thread TcpServiceThread(TcpServiceTask);
+
+        boost::thread TcpServiceThread(tcpServiceTask);
+
+        size_t UploadChannelNumber = Resource::GetResource()->GetUploadChannelNumber();
+        if (UploadChannelNumber > Constant::MaxUploadChannelNum)
+            UploadChannelNumber = Constant::MaxUploadChannelNum;
+        std::vector<boost::shared_ptr < boost::thread>> uploadThreads;
+        for (size_t i = 0; i < UploadChannelNumber; i++) {
+            boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, i);
+            uploadThreads.push_back(uploadThread);
+        }
 
 #if true
         // debug mode
         std::cout << "press any key to quit" << std::endl;
         std::cin.get();
-        SenderThread.interrupt();
         Resource::GetResource()->GetIoService().stop();
-        
-        SenderThread.join();
         TcpServiceThread.join();
+        for (std::vector<boost::shared_ptr<boost::thread>>::iterator it = uploadThreads.begin(); it != uploadThreads.end();) {
+            boost::shared_ptr<boost::thread> tsptr = *it;
+            tsptr->interrupt();
+            tsptr->join();
+            it = uploadThreads.erase(it);
+        }
 #endif
     } catch (std::exception &e) {
         Resource::GetResource()->GetLogger().error("main exception");
@@ -48,13 +69,9 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void senderTask() {
-    Sender sender;
-#if CarCompliance
-    sender.runForCarCompliance();
-#else
-    sender.run();
-#endif
+void uploadTask(const size_t& no) {
+    Uploader uploader(no, (const EnumRunMode&) Resource::GetResource()->GetMode());
+    uploader.task();
 }
 
 /* 车辆符合性检测：
@@ -68,7 +85,7 @@ void senderTask() {
  * 日志内容应包含服务器发送时间、报文时间、国标报文内容及车辆vin
  */
 
-void TcpServiceTask() {
+void tcpServiceTask() {
     boost::asio::io_service& ioService = Resource::GetResource()->GetIoService();
     TcpServer tcpServer(ioService, Resource::GetResource()->GetEnterprisePlatformTcpServicePort());
     ioService.run();

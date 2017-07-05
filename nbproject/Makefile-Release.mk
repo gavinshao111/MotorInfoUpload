@@ -40,9 +40,10 @@ OBJECTFILES= \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
 	${OBJECTDIR}/src/Forward/PublicServer.o \
 	${OBJECTDIR}/src/Forward/Resource.o \
-	${OBJECTDIR}/src/Forward/Sender.o \
+	${OBJECTDIR}/src/Forward/ResponseReader.o \
 	${OBJECTDIR}/src/Forward/TcpServer.o \
 	${OBJECTDIR}/src/Forward/TcpSession.o \
+	${OBJECTDIR}/src/Forward/Uploader.o \
 	${OBJECTDIR}/src/Util.o
 
 
@@ -95,10 +96,10 @@ ${OBJECTDIR}/src/Forward/Resource.o: src/Forward/Resource.cpp
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Resource.o src/Forward/Resource.cpp
 
-${OBJECTDIR}/src/Forward/Sender.o: src/Forward/Sender.cpp
+${OBJECTDIR}/src/Forward/ResponseReader.o: src/Forward/ResponseReader.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Sender.o src/Forward/Sender.cpp
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/ResponseReader.o src/Forward/ResponseReader.cpp
 
 ${OBJECTDIR}/src/Forward/TcpServer.o: src/Forward/TcpServer.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
@@ -109,6 +110,11 @@ ${OBJECTDIR}/src/Forward/TcpSession.o: src/Forward/TcpSession.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpSession.o src/Forward/TcpSession.cpp
+
+${OBJECTDIR}/src/Forward/Uploader.o: src/Forward/Uploader.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Uploader.o src/Forward/Uploader.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

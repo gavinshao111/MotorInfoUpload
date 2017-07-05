@@ -20,6 +20,7 @@ const string Constant::CmdVehicleLoginStr("vehicle login");
 const string Constant::CmdVehicleLogoutStr("vehicle logout");
 const string Constant::CmdRealtimeUploadStr("realtime upload");
 const string Constant::CmdReissueUploadStr("reissue upload");
-const string Constant::VinInital("Vin hasn't established");
+const string Constant::VinInital("Vin not set");
+const size_t Constant::MaxUploadChannelNum(100);
 
 

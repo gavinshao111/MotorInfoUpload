@@ -27,6 +27,7 @@ public:
     const static std::string CmdRealtimeUploadStr;
     const static std::string CmdReissueUploadStr;
     const static std::string VinInital;
+    const static size_t MaxUploadChannelNum;
 private:
 
 };

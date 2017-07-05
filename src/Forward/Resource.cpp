@@ -56,8 +56,8 @@ Resource::Resource()
     boost::property_tree::ini_parser::read_ini(iniPath, pt);
     
     string section = "AccessToPublicServer";
-    string PublicServerIp = pt.get<string>(section + ".Address", "");
-    int PublicServerPort = pt.get<int>(section + ".TcpPort", 1);
+    PublicServerIp = pt.get<string>(section + ".Address", "");
+    PublicServerPort = pt.get<int>(section + ".TcpPort", 1);
     PublicServerUserName = pt.get<string>(section + ".UserName", "");
     PublicServerPassword = pt.get<string>(section + ".Password", "");
     
@@ -77,10 +77,8 @@ Resource::Resource()
     LoginIntervals = pt.get<int>(section + ".LoginIntervals", 1);
     LoginIntervals2 = pt.get<int>(section + ".LoginIntervals2", 1);
     ReSetupPeroid = pt.get<int>(section + ".ReSetupPeroid", 1);
-//    try {
-//        TcpConnWithPublicPlatformSPtr = boost::make_shared<gsocket::GSocket>(PublicServerIp, PublicServerPort);
-//    } catch (gsocket::SocketConnectRefusedException& e) {}
-    publicServer.setConnectionOption(PublicServerIp, PublicServerPort);
+    UploadChannelNumber = pt.get<int>(section + ".UploadChannelNumber", 1);
+    Mode = pt.get<int>(section + ".Mode", 1);
     VehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue<BytebufSPtr_t>>(MaxVehicleDataQueueSize);
 }
 

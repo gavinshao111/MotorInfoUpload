@@ -20,7 +20,7 @@
 
 class PublicServer {
 public:
-    PublicServer();
+    PublicServer(const std::string& ip, const int& port);
     virtual ~PublicServer();
 
     void Close();
@@ -32,7 +32,6 @@ public:
     void Write(bytebuf::ByteBuffer& src);
     bool isConnected() const;
     
-    void setConnectionOption(const std::string& ip, const int& port);
 private:
     PublicServer(const PublicServer& orig);
     boost::shared_ptr<gsocket::GSocket> m_socketSPtr;

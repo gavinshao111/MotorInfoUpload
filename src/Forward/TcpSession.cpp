@@ -122,7 +122,7 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         }
 
         if (error == error::operation_aborted) {
-            m_logger.info("TcpSession::readHeaderHandler", "read operation canceled may because time out");
+            m_logger.info("TcpSession::readDataUnitHandler", "read operation canceled may because time out");
         } else {
             m_logger.error("TcpSession::readDataUnitHandler");
             m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
@@ -150,6 +150,8 @@ void TcpSession::write(const bytebuf::ByteBuffer& src, const size_t& offset, con
     if (src.remaining() < length + offset)
         throw std::runtime_error("TcpSession::write(): src space remaining is less than the size to write");
 
+    // ResponseReader 可能会调用写接口
+    std::unique_lock<std::mutex> lk(m_mutex);
     async_write(m_socket, buffer(src.array() + src.position() + offset, length),
             boost::bind(&TcpSession::writeHandler,
             shared_from_this(),
@@ -177,7 +179,7 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
-        m_logger.warn(m_vin, "read Timeout");
+        m_logger.warn(m_vin, "read vehicle session timeout");
         m_socket.close();
     }
 }
@@ -250,7 +252,7 @@ void TcpSession::parseDataUnit() {
                     default:
                     {
                         m_stream.str("");
-                        m_stream << "invalid info type code: " << typ;
+                        m_stream << "invalid info type code: " << (int)typ;
                         throw std::runtime_error(m_stream.str());
                     }
                 }
@@ -264,8 +266,6 @@ void TcpSession::parseDataUnit() {
         if (m_packetRef->remaining() != 1)
             throw std::runtime_error("invalid packet format: m_packetRef->remaining expect to be 1 after parse data unit");
 
-        if (cmdId == enumCmdCode::vehicleSignalDataUpload && !Resource::GetResource()->GetPublicServer().isConnected())
-            ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
         uint16_t newDataUnitLength = rtData->position() - sizeof (DataPacketHeader_t);
         ((DataPacketHeader_t*) rtData->array())->dataUnitLength = htons(newDataUnitLength);
         rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position() - 2));
