@@ -330,6 +330,7 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
                 cmdTypeStr = Constant::CmdReissueUploadStr;
                 dataToSend = m_carData;
                 break;
+                
             case enumCmdCode::vehicleLogin:
                 cmdTypeStr = Constant::CmdVehicleLoginStr;
                 dataToSend = m_carData;
