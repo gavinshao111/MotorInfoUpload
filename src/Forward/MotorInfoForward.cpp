@@ -11,6 +11,8 @@
 #include <vector>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
+#include <csignal>
+#include <mutex>
 #include"DataFormatForward.h"
 #include "TcpServer.h"
 #include "Resource.h"
@@ -31,9 +33,13 @@
 
 void uploadTask(const size_t& no);
 void tcpServiceTask();
+void signal_handler(int signal);
+
+std::mutex mtx;
 
 int main(int argc, char** argv) {
     try {
+
         Resource::GetResource();
 
         boost::thread TcpServiceThread(tcpServiceTask);
@@ -48,12 +54,20 @@ int main(int argc, char** argv) {
         }
 
 #if true
+        std::signal(SIGINT, signal_handler);
+        std::signal(SIGTERM, signal_handler);
+        mtx.lock();
+
+        std::cout << "[INIT] Service started" << std::endl;
+        Resource::GetResource()->GetLogger().info("INIT", "Service started");
+        mtx.lock();
+
         // debug mode
-        std::cout << "press any key to quit" << std::endl;
-        std::cin.get();
+//        std::cout << "press any key to quit" << std::endl;
+//        std::cin.get();
         Resource::GetResource()->GetIoService().stop();
         TcpServiceThread.join();
-        for (std::vector<boost::shared_ptr<boost::thread>>::iterator it = uploadThreads.begin(); it != uploadThreads.end();) {
+        for (std::vector<boost::shared_ptr < boost::thread>>::iterator it = uploadThreads.begin(); it != uploadThreads.end();) {
             boost::shared_ptr<boost::thread> tsptr = *it;
             tsptr->interrupt();
             tsptr->join();
@@ -64,9 +78,14 @@ int main(int argc, char** argv) {
         Resource::GetResource()->GetLogger().error("main exception");
         Resource::GetResource()->GetLogger().errorStream << e.what() << std::endl;
     }
-    std::cout << "done." << std::endl;
+    Resource::GetResource()->GetLogger().info("DONE", "Service shutdown");
+    std::cout << "[DONE] Service shutdown" << std::endl;
 
     return 0;
+}
+
+void signal_handler(int signal) {
+    mtx.unlock();
 }
 
 void uploadTask(const size_t& no) {
