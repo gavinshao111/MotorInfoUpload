@@ -14,7 +14,7 @@
 #ifndef PUBLICSERVER_H
 #define PUBLICSERVER_H
 
-#include "GSocket.h"
+#include "socket.h"
 #include <string>
 #include <boost/shared_ptr.hpp>
 
@@ -23,22 +23,20 @@ public:
     PublicServer(const std::string& ip, const int& port);
     virtual ~PublicServer();
 
-    void Close();
-    void Connect(/*const size_t& timeout = 0*/);
-    void Read(bytebuf::ByteBuffer& data, const size_t& size, const size_t& timeout = 0);
+    void close();
+    void connect(/*const size_t& timeout = 0*/);
+    void read(bytebuf::ByteBuffer& data, const size_t& size, const size_t& timeout = 0);
 
-    void Write(bytebuf::ByteBuffer& src, const size_t& size);
+    void write(bytebuf::ByteBuffer& src, const size_t& size);
 
-    void Write(bytebuf::ByteBuffer& src);
+    void write(bytebuf::ByteBuffer& src);
     bool isConnected() const;
     
 private:
     PublicServer(const PublicServer& orig);
-    boost::shared_ptr<gsocket::GSocket> m_socketSPtr;
+    boost::shared_ptr<gsocket::socket> m_socketSPtr;
     std::string m_ip;
     int m_port;
-    
-//    gsocket::GSocket& m_socket;
 };
 
 #endif /* PUBLICSERVER_H */

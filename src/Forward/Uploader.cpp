@@ -111,7 +111,12 @@ void Uploader::task() {
             if (!m_publicServer.isConnected()) {
                 setupConnAndLogin();
             }
-            m_carData = r_carDataQueue.take();
+            try {
+                m_carData = r_carDataQueue.take();
+            } catch (boost::thread_interrupted&) {
+//                cout << m_id << " catch thread_interrupted" << endl;
+                break;
+            }
             if (!m_carData->hasRemaining()) {
                 r_logger.warn("Uploader::run()", "take an empty realtimeData");
                 continue;
@@ -124,24 +129,24 @@ void Uploader::task() {
         }
         logout();
     } catch (exception &e) {
-        r_logger.error("Uploader exception");
+        r_logger.error(m_id, "exception");
         r_logger.errorStream << e.what() << std::endl;
     }
-    m_publicServer.Close();
+    m_publicServer.close();
     responseReaderThread.interrupt();
     responseReaderThread.join();
-    r_logger.info("DONE", "Uploader quiting...");
+    r_logger.info(m_id, "quiting...");
 }
 
 void Uploader::setupConnection() {
     if (m_publicServer.isConnected()) {
         return;
     }
-    m_publicServer.Close();
-    m_publicServer.Connect();
+    m_publicServer.close();
+    m_publicServer.connect();
     for (; !m_publicServer.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
         r_logger.warn(m_id, "connect refused by Public Server. Reconnecting...");
-        m_publicServer.Connect();
+        m_publicServer.connect();
     }
     r_logger.info(m_id, "connection with public platform established");
 }
@@ -330,7 +335,6 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
                 cmdTypeStr = Constant::CmdReissueUploadStr;
                 dataToSend = m_carData;
                 break;
-                
             case enumCmdCode::vehicleLogin:
                 cmdTypeStr = Constant::CmdVehicleLoginStr;
                 dataToSend = m_carData;
@@ -356,7 +360,7 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
         collectTime = mktime(&timeTM);
 
         sizeToSend = dataToSend->remaining();
-        m_publicServer.Write(*dataToSend);
+        m_publicServer.write(*dataToSend);
         // 为了打印日志，将pos指针退回
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);

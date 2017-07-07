@@ -26,33 +26,33 @@ PublicServer::PublicServer(const PublicServer& orig) {
 PublicServer::~PublicServer() {
 }
 
-void PublicServer::Close() {
+void PublicServer::close() {
     if (m_socketSPtr.use_count() == 0)
         return;
-    m_socketSPtr->Close();
+    m_socketSPtr->close();
 }
 
-void PublicServer::Connect(/*const size_t& timeout = 0*/) {
+void PublicServer::connect(/*const size_t& timeout = 0*/) {
     try {
         if (m_socketSPtr.use_count() == 0) {
-            m_socketSPtr = boost::make_shared<gsocket::GSocket>(m_ip, m_port);
+            m_socketSPtr = boost::make_shared<gsocket::socket>(m_ip, m_port);
         } else {
-            m_socketSPtr->Connect();
+            m_socketSPtr->connect();
         }
     } catch (gsocket::SocketConnectRefusedException& e) {
     }
 }
 
-void PublicServer::Read(bytebuf::ByteBuffer& data, const size_t& size, const size_t& timeout/* = 0*/) {
-    m_socketSPtr->Read(data, size, timeout);
+void PublicServer::read(bytebuf::ByteBuffer& data, const size_t& size, const size_t& timeout/* = 0*/) {
+    m_socketSPtr->read(data, size, timeout);
 }
 
-void PublicServer::Write(bytebuf::ByteBuffer& src, const size_t& size) {
-    m_socketSPtr->Write(src, size);
+void PublicServer::write(bytebuf::ByteBuffer& src, const size_t& size) {
+    m_socketSPtr->write(src, size);
 }
 
-void PublicServer::Write(bytebuf::ByteBuffer& src) {
-    m_socketSPtr->Write(src);
+void PublicServer::write(bytebuf::ByteBuffer& src) {
+    m_socketSPtr->write(src);
 }
 
 bool PublicServer::isConnected() const {

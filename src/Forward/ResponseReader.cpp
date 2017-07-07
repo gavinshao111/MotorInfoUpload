@@ -14,6 +14,7 @@
 #include "ResponseReader.h"
 #include <unistd.h>
 #include <boost/make_shared.hpp>
+#include <boost/thread.hpp>
 #include "Resource.h"
 #include "Constant.h"
 #include "../Util.h"
@@ -44,7 +45,12 @@ void ResponseReader::task() {
         for (;;) {
             if (!r_publicServer.isConnected()) {
                 m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::init;
-                usleep(500 * 1000);
+                try {
+                    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+                } catch (boost::thread_interrupted&) {
+//                    cout << m_id << " catch thread_interrupted" << endl;
+                    break;
+                }
                 continue;
             }
             readResponse(timeout);
@@ -85,7 +91,7 @@ void ResponseReader::task() {
         r_logger.error("ResponseReader exception");
         r_logger.errorStream << e.what() << std::endl;
     }
-    r_logger.info("DONE", "ResponseReader quiting...");
+    r_logger.info(m_id, "quiting...");
 }
 
 /*
@@ -103,7 +109,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
     DataPacketHeader_t* packetHdrTmp = (DataPacketHeader_t*) m_responseBuf.array();
     m_stream.str("");
     try {
-        r_publicServer.Read(m_responseBuf, 2, timeout * 1000);
+        r_publicServer.read(m_responseBuf, 2, timeout);
         if (packetHdrTmp->startCode[0] != '#' || packetHdrTmp->startCode[1] != '#') {
             m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
             m_stream << "start code expect to be 35, 35(##), actually is "
@@ -111,7 +117,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
             return;
         }
 
-        r_publicServer.Read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout * 1000);
+        r_publicServer.read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout);
         m_vin.assign((char*) packetHdrTmp->vin, sizeof (packetHdrTmp->vin));
         responseDataUnitLen = boost::asio::detail::socket_ops::network_to_host_short(
                 packetHdrTmp->dataUnitLength);
@@ -121,7 +127,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
             m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
             return;
         }
-        r_publicServer.Read(m_responseBuf, responseDataUnitLen + 1, timeout * 1000000);
+        r_publicServer.read(m_responseBuf, responseDataUnitLen + 1, timeout);
     } catch (SocketTimeoutException& e) {
         m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::timeout;
         return;
@@ -152,8 +158,8 @@ void ResponseReader::readResponse(const size_t& timeout) {
     responseTime = (TimeForward_t*) (m_responseBuf.array() + sizeof (DataPacketHeader_t));
 
     //    m_stream.str("");
-    //    m_stream << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
-    //            << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec;
+//        cout << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
+//                << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec << endl;
     //    Util::output(m_vin, m_stream.str());
     //    m_stream.str("");
     //    m_stream << "response encryptionAlgorithm: " << (int) packetHdrTmp->encryptionAlgorithm;
