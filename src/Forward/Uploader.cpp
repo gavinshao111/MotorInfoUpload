@@ -370,7 +370,7 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
         r_logger.info(m_vin, m_stream.str());
 
         ofstream file;
-        file.open("log/message.txt", ofstream::out | ofstream::binary);
+        file.open("log/message.txt", ofstream::out | ofstream::binary | ofstream::app);
         outputMsg(file, m_vin, collectTime, m_lastSendTime, dataToSend.get());
         file.close();
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
