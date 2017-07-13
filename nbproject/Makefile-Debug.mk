@@ -51,8 +51,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0
-CXXFLAGS=-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0
+CCFLAGS=-std=c++0x -DUseBoostMutex=1
+CXXFLAGS=-std=c++0x -DUseBoostMutex=1
 
 # Fortran Compiler Flags
 FFLAGS=

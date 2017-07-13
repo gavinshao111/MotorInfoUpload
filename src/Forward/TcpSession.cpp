@@ -65,20 +65,21 @@ void TcpSession::readHeader() {
 }
 
 void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred) {
-    // 如果此时对方关闭socket，error.value = 2, message = End of file
     m_timer.cancel();
     if (error) {
         if (m_vin.compare(Constant::VinInital) != 0) {
-            std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
+            boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
             //            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
         }
 
         if (error == error::operation_aborted) {
             m_logger.info("TcpSession::readHeaderHandler", "read operation canceled may because time out");
+        } else if (error == error::eof) {
+            m_logger.info("TcpSession::readHeaderHandler", "session closed by peer");
         } else {
-            m_logger.error("TcpSession::readHeaderHandler");
-            m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
+            m_logger.error("TcpSession::readHeaderHandler error");
+            m_logger.errorStream << "message: " << error.message() << ", code: " << error.value() << std::endl;
         }
         return;
     }
@@ -116,16 +117,18 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
     m_timer.cancel();
     if (error) {
         if (m_vin.compare(Constant::VinInital) != 0) {
-            std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
+            boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
 //            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
 
         if (error == error::operation_aborted) {
-            m_logger.info("TcpSession::readDataUnitHandler", "read operation canceled may because time out");
+            m_logger.info(m_vin, "read operation canceled may because time out");
+        } else if (error == error::eof) {
+            m_logger.info(m_vin, "session closed by peer");
         } else {
-            m_logger.error("TcpSession::readDataUnitHandler");
-            m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
+            m_logger.error(m_vin, "TcpSession::readDataUnitHandler error");
+            m_logger.errorStream << "message: " << error.message() << ", code: " << error.value() << std::endl;
         }
         return;
     }
@@ -151,7 +154,7 @@ void TcpSession::write(const bytebuf::ByteBuffer& src, const size_t& offset, con
         throw std::runtime_error("TcpSession::write(): src space remaining is less than the size to write");
 
     // ResponseReader 可能会调用写接口
-    std::unique_lock<std::mutex> lk(m_mutex);
+    boost::unique_lock<boost::mutex> lk(m_mutex);
     async_write(m_socket, buffer(src.array() + src.position() + offset, length),
             boost::bind(&TcpSession::writeHandler,
             shared_from_this(),
@@ -160,11 +163,12 @@ void TcpSession::write(const bytebuf::ByteBuffer& src, const size_t& offset, con
 }
 
 void TcpSession::writeHandler(const boost::system::error_code& error, size_t bytes_transferred) {
-    // 此时对方关闭socket，m_socket.is_open()仍为true error == error::broken_pipe
+    // 此时对方关闭socket，m_socket.is_open()仍为true error == error::broken_pipe 
+    // 经实测，以上有误。对方关闭socket，这边不会有任何影响
     if (error) {
         m_logger.error("TcpSession::writeHandler");
         m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
-        std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
+        boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (m_vin.compare(Constant::VinInital) != 0) {
             int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
 //            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
@@ -274,7 +278,7 @@ void TcpSession::parseDataUnit() {
     } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
         m_packetRef->position(0);
         Resource::GetResource()->GetVehicleDataQueue().put(m_packetRef);
-        std::unique_lock<std::mutex> lk(Resource::GetResource()->GetTableMutex());
+        boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
         if (cmdId == enumCmdCode::vehicleLogin) {
             std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;
             ret = Resource::GetResource()->GetVechicleConnTable().insert(std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));

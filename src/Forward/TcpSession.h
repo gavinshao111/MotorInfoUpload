@@ -17,7 +17,7 @@
 #include <boost/smart_ptr/enable_shared_from_this.hpp>
 #include <boost/asio.hpp>
 #include <string>
-#include <mutex>
+#include <boost/thread/mutex.hpp>
 #include "ByteBuffer.h"
 #include "DataFormatForward.h"
 #include "Logger.h"
@@ -53,7 +53,7 @@ private:
     size_t m_heartBeatCycle;
     std::stringstream m_stream;
     Logger& m_logger;
-    std::mutex m_mutex;
+    boost::mutex m_mutex;
 
     friend class TcpServer;
 

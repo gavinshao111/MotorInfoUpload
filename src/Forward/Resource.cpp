@@ -18,6 +18,7 @@
 #include <string>
 #include <stdexcept>
 #include <fstream>
+#include <iomanip>
 
 using namespace std;
 const static string iniPath = "configurtion.ini";
@@ -65,6 +66,7 @@ Resource::Resource()
     EnterprisePlatformTcpServicePort = pt.get<int>(section + ".TcpPort", 1);
     HeartBeatCycle = pt.get<int>(section + ".HeartBeatCycle", 1);
     int MaxVehicleDataQueueSize = pt.get<int>(section + ".MaxVehicleDataQueueSize", 1);
+    VehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue<BytebufSPtr_t>>(MaxVehicleDataQueueSize);
     
     section.assign("DataPacket");
     EncryptionAlgorithm = (enumEncryptionAlgorithm)pt.get<int>(section + ".EncryptionAlgorithm", 1);
@@ -77,9 +79,19 @@ Resource::Resource()
     LoginIntervals = pt.get<int>(section + ".LoginIntervals", 1);
     LoginIntervals2 = pt.get<int>(section + ".LoginIntervals2", 1);
     ReSetupPeroid = pt.get<int>(section + ".ReSetupPeroid", 1);
+    
+    section.assign("Runing");
     UploadChannelNumber = pt.get<int>(section + ".UploadChannelNumber", 1);
     Mode = pt.get<int>(section + ".Mode", 1);
-    VehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue<BytebufSPtr_t>>(MaxVehicleDataQueueSize);
+    string messageOutputFilePath = pt.get<string>(section + ".MessageOutputFilePath", "");
+    messageOs.open(messageOutputFilePath.c_str(), ofstream::out | ofstream::trunc | ofstream::binary);
+    // 输出到日志 vin - collect time - send time - data(decimal)
+    messageOs << setiosflags(ios::left)
+            << setw(21) << setfill(' ') << "vin"
+            << setw(23) << setfill(' ') << "collect_time"
+            << setw(23) << setfill(' ') << "send_time"
+            << "binary data\n"
+            << endl;
 }
 
 Resource* Resource::GetResource() {
@@ -89,4 +101,5 @@ Resource* Resource::GetResource() {
 }
 
 Resource::~Resource() {
+    messageOs.close();
 }

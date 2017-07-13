@@ -15,7 +15,7 @@
 #define UPLOADER_H
 
 #include <sstream>
-#include <fstream>
+#include "Resource.h"
 #include "DataFormatForward.h"
 #include "../BlockQueue.h"
 #include "PublicServer.h"
@@ -42,7 +42,6 @@ public:
     Uploader(const size_t& no, const EnumRunMode& mode);
     virtual ~Uploader();
     void task();
-    void runForCarCompliance();
 
 private:
     Uploader(const Uploader& orig);
@@ -57,6 +56,7 @@ private:
     void logout();
     void static outputMsg(std::ostream& out, const std::string& vin, const time_t& collectTime, const time_t& sendTime, const bytebuf::ByteBuffer* data = NULL);
 
+    Resource* r_resource;
     blockqueue::BlockQueue<BytebufSPtr_t>& r_carDataQueue;
     //    gsocket::GSocket& s_tcpConn;
     PublicServer m_publicServer;

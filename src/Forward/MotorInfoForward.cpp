@@ -11,7 +11,6 @@
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <csignal>
-#include <mutex>
 #include"DataFormatForward.h"
 #include "TcpServer.h"
 #include "Resource.h"
@@ -33,7 +32,7 @@ void uploadTask(const size_t& no);
 void tcpServiceTask();
 void signal_handler(int signal);
 
-std::mutex mtx;
+boost::condition_variable quit;
 
 int main(int argc, char** argv) {
     try {
@@ -54,11 +53,12 @@ int main(int argc, char** argv) {
 #if true
         std::signal(SIGINT, signal_handler);
         std::signal(SIGTERM, signal_handler);
-        mtx.lock();
 
         std::cout << "[INIT] Service started" << std::endl;
         Resource::GetResource()->GetLogger().info("INIT", "Service started");
-        mtx.lock();
+        boost::mutex mtx;
+        boost::unique_lock<boost::mutex> lk(mtx);
+        quit.wait(lk);
 
         // debug mode
 //        std::cout << "press any key to quit" << std::endl;
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 }
 
 void signal_handler(int signal) {
-    mtx.unlock();
+    quit.notify_all();
 }
 
 void uploadTask(const size_t& no) {
@@ -100,6 +100,26 @@ void uploadTask(const size_t& no) {
  * 6. 转发报警数据5分钟
  * 7. 车辆离线10分钟，转发车辆补发数据
  * 日志内容应包含服务器发送时间、报文时间、国标报文内容及车辆vin
+ */
+
+/**
+ * 平台符合性检测：
+ * 1、 执行平台登入、登出操作，共计执行5个循环；
+ * 2、 执行车辆登入、登出操作，共计执行5个循环；
+ * 3、 发送单一车辆行驶数据，车辆行驶状态数据维持发送 15分钟以上；
+ * 4、 发送单一车辆充电数据，车辆充电状态数据维持发送15分钟以上；
+ * 5、 发送单一车辆SOC为100%时车辆充电状态数据，维持发送5分钟以上；
+ * 6、 发送单一车辆报警数据，需维持该报警并持续发送5分钟以上；
+ * 7、 发送车辆补发数据，车辆离线状态数据应维持10分钟以上；
+ * (注意：车辆补发数据指车辆与企业平台断开连接时产生的数据)
+ * 8、 发送平台补发数据，平台离线状态数据应维持10分钟以上；
+ * (注意：平台补发数据指企业平台与国家平台断开连接时产生的数据，车辆与企业平台应维持连接，并持续发送数据)
+ * 以上所有项目通过后，执行多车单链路、多车多链路测试。
+ * 9、 多车单链路：企业平台应通过同一条tcp链路发送不同运行状态下的不同车辆数据到国家平台，车辆数不应少于3台，数据应维持发送15分钟以上；
+ * 通过多车单链路测试后， 应向检测人员申请开启多链路，多链路的平台唯一码、密码与原链路相同，仅用户名为原用户名+“1”
+ * 10、 多车多链路：企业应通过主链路及新开通的辅链路发送不同运行状态下的不同
+ * 车辆数据到国家平台，车辆数不应少于3台，数据应维持发送15分钟以上。
+ * 
  */
 
 void tcpServiceTask() {

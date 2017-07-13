@@ -8,7 +8,6 @@
 #include "Uploader.h"
 #include <stdexcept>
 #include <iomanip>
-#include <string.h>
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
@@ -35,14 +34,15 @@ m_serialNumber(1),
 m_lastloginTime(0),
 m_lastSendTime(0),
 m_uploaderStatus(uploaderstatus::EnumUploaderStatus::init),
-r_carDataQueue(Resource::GetResource()->GetVehicleDataQueue()),
-m_publicServer(Resource::GetResource()->GetPublicServerIp(), Resource::GetResource()->GetPublicServerPort()),
+r_resource(Resource::GetResource()),
+r_carDataQueue(r_resource->GetVehicleDataQueue()),
+m_publicServer(r_resource->GetPublicServerIp(), r_resource->GetPublicServerPort()),
 m_vin(Constant::VinInital),
 m_responseReader(no, m_publicServer),
-r_logger(Resource::GetResource()->GetLogger()) {
-    const string& usernameInIni = Resource::GetResource()->GetPublicServerUserName();
+r_logger(r_resource->GetLogger()) {
+    const string& usernameInIni = r_resource->GetPublicServerUserName();
     if ((usernameInIni.length() + no) > sizeof (m_loginData.username)
-            || (Resource::GetResource()->GetPublicServerPassword().length() > sizeof (m_loginData.password)))
+            || (r_resource->GetPublicServerPassword().length() > sizeof (m_loginData.password)))
         throw runtime_error("Uploader(): PublicServerUserName or PublicServerPassword Illegal");
     m_stream << "Uploader." << no;
     m_id = m_stream.str();
@@ -52,32 +52,21 @@ r_logger(Resource::GetResource()->GetLogger()) {
     for (int i = 0; i < no; i++) {
         m_loginData.username[usernameInIni.length() + i] = '1';
     }
-    Resource::GetResource()->GetPublicServerPassword().copy((char*) m_loginData.password, sizeof (m_loginData.password));
-    m_loginData.encryptionAlgorithm = Resource::GetResource()->GetEncryptionAlgorithm();
+    r_resource->GetPublicServerPassword().copy((char*) m_loginData.password, sizeof (m_loginData.password));
+    m_loginData.encryptionAlgorithm = r_resource->GetEncryptionAlgorithm();
     m_loginData.header.encryptionAlgorithm = m_loginData.encryptionAlgorithm;
     m_logoutData.header.encryptionAlgorithm = m_loginData.encryptionAlgorithm;
 
     m_loginData.header.cmdId = enumCmdCode::platformLogin;
     m_logoutData.header.cmdId = enumCmdCode::platformLogout;
 
-    Resource::GetResource()->GetPaltformId().copy((char*) m_loginData.header.vin, VINLEN);
-    Resource::GetResource()->GetPaltformId().copy((char*) m_logoutData.header.vin, VINLEN);
+    r_resource->GetPaltformId().copy((char*) m_loginData.header.vin, VINLEN);
+    r_resource->GetPaltformId().copy((char*) m_logoutData.header.vin, VINLEN);
 
     uint16_t dataUnitLength = sizeof (LoginDataForward_t) - sizeof (DataPacketHeader) - 1;
     m_loginData.header.dataUnitLength = boost::asio::detail::socket_ops::host_to_network_short(dataUnitLength);
     dataUnitLength = sizeof (LogoutDataForward_t) - sizeof (DataPacketHeader) - 1;
     m_logoutData.header.dataUnitLength = boost::asio::detail::socket_ops::host_to_network_short(dataUnitLength);
-
-    ofstream file;
-    file.open("log/message.txt", ofstream::out | ofstream::trunc | ofstream::binary);
-    // 输出到日志 vin - collect time - send time - data(decimal)
-    file << setiosflags(ios::left)
-            << setw(21) << setfill(' ') << "vin"
-            << setw(23) << setfill(' ') << "collect_time"
-            << setw(23) << setfill(' ') << "send_time"
-            << "data\n"
-            << endl;
-    file.close();
 }
 
 Uploader::~Uploader() {
@@ -144,7 +133,7 @@ void Uploader::setupConnection() {
     }
     m_publicServer.close();
     m_publicServer.connect();
-    for (; !m_publicServer.isConnected(); sleep(Resource::GetResource()->GetReSetupPeroid())) {
+    for (; !m_publicServer.isConnected(); sleep(r_resource->GetReSetupPeroid())) {
         r_logger.warn(m_id, "connect refused by Public Server. Reconnecting...");
         m_publicServer.connect();
     }
@@ -204,7 +193,7 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
         int nowYear = timeTM->tm_year;
         localtime(&m_lastloginTime);
 
-        if (m_serialNumber > Resource::GetResource()->GetMaxSerialNumber()
+        if (m_serialNumber > r_resource->GetMaxSerialNumber()
                 || nowDay != timeTM->tm_mday
                 || nowMon != timeTM->tm_mon
                 || nowYear != timeTM->tm_year)
@@ -216,7 +205,7 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
         if (!needResponse)
             break;
         r_logger.info(m_id, "waiting for public server's response...");
-        //        readResponse(Resource::GetResource()->GetReadResponseTimeOut());
+        //        readResponse(r_resource->GetReadResponseTimeOut());
 
         bool rereadResponse;
         do {
@@ -231,10 +220,10 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::timeout:
                 {
-                    size_t timeToSleep = Resource::GetResource()->GetLoginTimes() >= i ?
-                            Resource::GetResource()->GetLoginIntervals() : Resource::GetResource()->GetLoginIntervals2();
+                    size_t timeToSleep = r_resource->GetLoginTimes() >= i ?
+                            r_resource->GetLoginIntervals() : r_resource->GetLoginIntervals2();
                     m_stream.str("");
-                    m_stream << "read response " << Resource::GetResource()->GetReadResponseTimeOut()
+                    m_stream << "read response " << r_resource->GetReadResponseTimeOut()
                             << "s timeout when login, sleep " << timeToSleep << "s and resend";
                     r_logger.info(m_id, m_stream.str());
                     r_logger.warn(m_id, m_stream.str());
@@ -369,10 +358,9 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
         m_stream << sizeToSend << " bytes of " << cmdTypeStr << " data uploaded";
         r_logger.info(m_vin, m_stream.str());
 
-        ofstream file;
-        file.open("log/message.txt", ofstream::out | ofstream::binary | ofstream::app);
-        outputMsg(file, m_vin, collectTime, m_lastSendTime, dataToSend.get());
-        file.close();
+        if (r_resource->GetUploadChannelNumber() > 1)
+            boost::unique_lock<boost::mutex> lk(r_resource->GetMsgMtx());
+        outputMsg(r_resource->GetMessageOs(), m_vin, collectTime, m_lastSendTime, dataToSend.get());
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         r_logger.warn("Uploader::tcpSendData exception");
         r_logger.warnStream << e.what() << std::endl;
@@ -389,5 +377,4 @@ void Uploader::outputMsg(ostream& out, const string& vin, const time_t& collectT
         data->outputAsDec(out);
     }
     out << endl;
-    out.flush();
 }

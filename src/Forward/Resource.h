@@ -16,7 +16,8 @@
 
 #include <string>
 #include <map>
-#include <mutex>
+#include <boost/thread/mutex.hpp>
+#include <fstream>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 #include "../BlockQueue.h"
@@ -94,7 +95,7 @@ public:
         return VechicleConnTable;
     }
 
-    std::mutex& GetTableMutex() {
+    boost::mutex& GetTableMutex() {
         return MtxForTable;
     }
 
@@ -116,6 +117,14 @@ public:
 
     const uint8_t& GetMode() const {
         return Mode;
+    }
+
+    std::ofstream& GetMessageOs() {
+        return messageOs;
+    }
+
+    boost::mutex& GetMsgMtx() {
+        return msgMtx;
     }
 
 private:
@@ -173,10 +182,12 @@ private:
 //    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
     
     ConnTable_t VechicleConnTable;
-    std::mutex MtxForTable;
+    boost::mutex MtxForTable;
     
     boost::asio::io_service IoService;
     Logger logger;
+    std::ofstream messageOs;
+    boost::mutex msgMtx;
 };
 
 #endif /* RESOURCE_H */

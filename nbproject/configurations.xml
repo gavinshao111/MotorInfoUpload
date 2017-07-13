@@ -58,7 +58,7 @@
             <pElem>../GavinLib/ByteBuffer/src</pElem>
             <pElem>../GavinLib/GSocket/src</pElem>
           </incDir>
-          <commandLine>-std=c++0x -DUseBoostMutex=1 -DCarCompliance=0</commandLine>
+          <commandLine>-std=c++0x -DUseBoostMutex=1</commandLine>
         </ccTool>
         <linkerTool>
           <output>motorinfoupload</output>
