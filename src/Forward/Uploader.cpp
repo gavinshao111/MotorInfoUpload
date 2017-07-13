@@ -120,6 +120,7 @@ void Uploader::task() {
     } catch (exception &e) {
         r_logger.error(m_id, "exception");
         r_logger.errorStream << e.what() << std::endl;
+    } catch (boost::thread_interrupted&) {
     }
     m_publicServer.close();
     responseReaderThread.interrupt();
@@ -133,7 +134,7 @@ void Uploader::setupConnection() {
     }
     m_publicServer.close();
     m_publicServer.connect();
-    for (; !m_publicServer.isConnected(); sleep(r_resource->GetReSetupPeroid())) {
+    for (; !m_publicServer.isConnected(); boost::this_thread::sleep(boost::posix_time::seconds(r_resource->GetReSetupPeroid()))) {
         r_logger.warn(m_id, "connect refused by Public Server. Reconnecting...");
         m_publicServer.connect();
     }
@@ -213,7 +214,7 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
             switch (m_responseReader.status()) {
                 case responsereaderstatus::EnumResponseReaderStatus::init:
                     rereadResponse = true; // 可能ResponseReader正在sleep
-                    usleep(500 * 1000);
+                    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
                     //                setupConnection();
@@ -227,7 +228,7 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
                             << "s timeout when login, sleep " << timeToSleep << "s and resend";
                     r_logger.info(m_id, m_stream.str());
                     r_logger.warn(m_id, m_stream.str());
-                    sleep(timeToSleep);
+                    boost::this_thread::sleep(boost::posix_time::seconds(timeToSleep));
                     break;
                 }
                 case responsereaderstatus::EnumResponseReaderStatus::responseOk:
