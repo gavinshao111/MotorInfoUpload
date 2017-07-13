@@ -1,0 +1,197 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/* 
+ * File:   resource.h
+ * Author: 10256
+ *
+ * Created on 2017年5月16日, 下午3:37
+ */
+
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+#include <string>
+#include <map>
+#include <boost/thread/mutex.hpp>
+#include <fstream>
+#include <boost/asio.hpp>
+#include <boost/shared_ptr.hpp>
+#include "../BlockQueue.h"
+//#include "GSocket.h"
+#include "DataFormatForward.h"
+#include "TcpSession.h"
+#include "Logger.h"
+#include "PublicServer.h"
+
+class resource {
+public:
+    
+    static resource* getResource();
+    virtual ~resource();
+
+    blockqueue::BlockQueue<BytebufSPtr_t>& getVehicleDataQueue() {
+        return *vehicleDataQueueSPtr;
+    }
+
+    const size_t& getMaxSerialNumber() const {
+        return maxSerialNumber;
+    }
+
+    const size_t& getReSetupPeroid() const {
+        return reSetupPeroid;
+    }
+
+    const std::string& getPaltformId() const {
+        return paltformId;
+    }
+
+    const enumEncryptionAlgorithm& getEncryptionAlgorithm() const {
+        return encryptionAlgorithm;
+    }
+
+    const size_t& getLoginTimes() const {
+        return loginTimes;
+    }
+
+    const size_t& getLoginIntervals2() const {
+        return loginIntervals2;
+    }
+
+    const size_t& getLoginIntervals() const {
+        return loginIntervals;
+    }
+
+    const size_t& getReadResponseTimeOut() const {
+        return readResponseTimeOut;
+    }
+
+    const int& getEnterprisePlatformTcpServicePort() const {
+        return enterprisePlatformTcpServicePort;
+    }
+
+    const std::string& getPublicServerPassword() const {
+        return publicServerPassword;
+    }
+
+    const std::string& getPublicServerUserName() const {
+        return publicServerUserName;
+    }
+
+    const int& getPublicServerPort() const {
+        return publicServerPort;
+    }
+
+    const std::string& getPublicServerIp() const {
+        return publicServerIp;
+    }
+    
+    typedef std::map<std::string, SessionRef_t> SessionTable_t;
+    
+    SessionTable_t& getVechicleSessionTable() {
+        return vechicleSessionTable;
+    }
+
+    boost::mutex& getTableMutex() {
+        return mtxForTable;
+    }
+
+    const size_t& getHeartBeatCycle() const {
+        return heartBeatCycle;
+    }
+
+    boost::asio::io_service& getIoService() {
+        return ioService;
+    }
+
+    Logger& getLogger() {
+        return logger;
+    }
+
+    const size_t& getUploadChannelNumber() const {
+        return uploadChannelNumber;
+    }
+
+    const uint8_t& getMode() const {
+        return mode;
+    }
+
+    std::ofstream& getMessageOs() {
+        return messageOs;
+    }
+
+    boost::mutex& getMsgMtx() {
+        return msgMtx;
+    }
+
+    const enumSystem& getSystem() const {
+        return system;
+    }
+
+private:
+    resource();
+    
+    static resource* s_resource;
+    
+    std::string publicServerIp;
+    int publicServerPort;
+    std::string publicServerUserName;
+    std::string publicServerPassword;
+
+    int enterprisePlatformTcpServicePort;
+
+    /*
+     * 等待公共平台回应超时（ReadResponseTimeOut），
+     */
+    size_t readResponseTimeOut;
+    /* 
+     * 登入没有回应每隔1min（LoginTimeout）重新发送登入数据。
+     * 3（LoginTimes）次登入没有回应，每隔30min（loginTimeout2）重新发送登入数据。
+     */
+    size_t loginIntervals;
+    size_t loginIntervals2;
+    size_t loginTimes;
+    /*
+     * 校验失败：
+     *  国标：重发本条实时信息（应该是调整后重发）。每隔1min（CarDataResendIntervals）重发，最多发送3(MaxSendCarDataTimes)次
+     *  国标2：如客户端平台收到应答错误，应及时与服务端平台进行沟通，对登入信息进行调整。
+     *  由于平台无法做到实时调整，只能转发错误回应给车机，继续发下一条。所以不再重发本条实时信息，等车机调整后直接转发。
+     * 未响应：
+     *  国标2：如客户端平台未收到应答，平台重新登入
+     */
+    //    size_t CarDataResendIntervals;
+    //    size_t MaxSendCarDataTimes;
+
+    enumEncryptionAlgorithm encryptionAlgorithm;
+
+    /* 平台登入登出的唯一识别号，
+     * 城市邮政编码 + VIN前三位（地方平台使用GOV）+ 两位自定义数据 + "000000"
+     */
+    std::string paltformId;
+    size_t reSetupPeroid; // tcp 中断后每隔几秒重连
+
+    //    gavinsocket::GSocketClient* tcpConnection;
+    size_t maxSerialNumber;    
+    size_t heartBeatCycle;  // 车机与我平台的默认心跳周期
+    size_t uploadChannelNumber;
+    
+    uint8_t mode;
+
+    boost::shared_ptr<blockqueue::BlockQueue<BytebufSPtr_t>> vehicleDataQueueSPtr;
+//    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
+    
+    SessionTable_t vechicleSessionTable;
+    boost::mutex mtxForTable;
+    
+    boost::asio::io_service ioService;
+    Logger logger;
+    std::ofstream messageOs;
+    boost::mutex msgMtx;
+    enumSystem system;
+};
+
+#endif /* RESOURCE_H */
+
