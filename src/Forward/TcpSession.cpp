@@ -137,9 +137,8 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
     try {
         parseDataUnit();
     } catch (std::runtime_error& e) {
-        m_logger.error("TcpSession exception");
+        m_logger.error(m_vin, "TcpSession exception");
         m_logger.errorStream << e.what() << std::endl;
-        //        Util::output("TcpSession", "dealData error: ", e.what());
     }
     if (!m_quit)
         readHeader();
