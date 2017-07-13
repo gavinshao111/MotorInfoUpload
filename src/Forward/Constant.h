@@ -20,14 +20,15 @@ public:
     Constant(const Constant& orig);
     virtual ~Constant();
     
-    const static std::string CmdPlatformLoginStr;
-    const static std::string CmdPlatformLogoutStr;
-    const static std::string CmdVehicleLoginStr;
-    const static std::string CmdVehicleLogoutStr;
-    const static std::string CmdRealtimeUploadStr;
-    const static std::string CmdReissueUploadStr;
-    const static std::string VinInital;
-    const static size_t MaxUploadChannelNum;
+    const static std::string cmdPlatformLoginStr;
+    const static std::string cmdPlatformLogoutStr;
+    const static std::string cmdVehicleLoginStr;
+    const static std::string cmdVehicleLogoutStr;
+    const static std::string cmdRealtimeUploadStr;
+    const static std::string cmdReissueUploadStr;
+    const static std::string vinInital;
+    const static size_t maxUploadChannelNum;
+    const static std::string iniPath;
 private:
 
 };

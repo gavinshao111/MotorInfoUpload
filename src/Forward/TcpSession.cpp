@@ -24,18 +24,18 @@
 #include <bits/basic_string.h>
 
 #include "../Util.h"
-#include "Resource.h"
+#include "resource.h"
 #include "Constant.h"
 
 using namespace boost::asio;
 
 TcpSession::TcpSession(io_service& ioservice) :
-m_heartBeatCycle(Resource::GetResource()->GetHeartBeatCycle()),
+m_heartBeatCycle(resource::getResource()->getHeartBeatCycle()),
 m_socket(ioservice),
 m_timer(ioservice),
 m_quit(false),
-m_logger(Resource::GetResource()->GetLogger()),
-m_vin(Constant::VinInital) {
+m_logger(resource::getResource()->getLogger()),
+m_vin(Constant::vinInital) {
 }
 
 TcpSession::~TcpSession() {
@@ -67,9 +67,9 @@ void TcpSession::readHeader() {
 void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     m_timer.cancel();
     if (error) {
-        if (m_vin.compare(Constant::VinInital) != 0) {
-            boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
+        if (m_vin.compare(Constant::vinInital) != 0) {
+            boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
+            int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
             //            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
         }
 
@@ -87,14 +87,14 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
     m_packetRef->position(bytes_transferred);
 
     m_hdr = (DataPacketHeader_t*) m_packetRef->array();
-    if (m_vin.compare(Constant::VinInital) == 0) {
+    if (m_vin.compare(Constant::vinInital) == 0) {
         m_vin.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
     }
 
     if (m_hdr->cmdId == enumCmdCode::vehicleSignalDataUpload)
-        m_logger.info(m_vin, Constant::CmdRealtimeUploadStr);
+        m_logger.info(m_vin, Constant::cmdRealtimeUploadStr);
     else if (m_hdr->cmdId == enumCmdCode::reissueUpload)
-        m_logger.info(m_vin, Constant::CmdReissueUploadStr);
+        m_logger.info(m_vin, Constant::cmdReissueUploadStr);
 
     readDataUnit();
 }
@@ -116,9 +116,9 @@ void TcpSession::readDataUnit() {
 void TcpSession::readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred) {
     m_timer.cancel();
     if (error) {
-        if (m_vin.compare(Constant::VinInital) != 0) {
-            boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
+        if (m_vin.compare(Constant::vinInital) != 0) {
+            boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
+            int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
 //            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
 
@@ -168,9 +168,9 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
     if (error) {
         m_logger.error("TcpSession::writeHandler");
         m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
-        boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
-        if (m_vin.compare(Constant::VinInital) != 0) {
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
+        boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
+        if (m_vin.compare(Constant::vinInital) != 0) {
+            int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
 //            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
         }
         return;
@@ -274,17 +274,17 @@ void TcpSession::parseDataUnit() {
         ((DataPacketHeader_t*) rtData->array())->dataUnitLength = htons(newDataUnitLength);
         rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position() - 2));
         rtData->flip();
-        Resource::GetResource()->GetVehicleDataQueue().put(rtData);
+        resource::getResource()->getVehicleDataQueue().put(rtData);
     } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
         m_packetRef->position(0);
-        Resource::GetResource()->GetVehicleDataQueue().put(m_packetRef);
-        boost::unique_lock<boost::mutex> lk(Resource::GetResource()->GetTableMutex());
+        resource::getResource()->getVehicleDataQueue().put(m_packetRef);
+        boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
         if (cmdId == enumCmdCode::vehicleLogin) {
             std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;
-            ret = Resource::GetResource()->GetVechicleConnTable().insert(std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
+            ret = resource::getResource()->getVechicleSessionTable().insert(std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
             //            std::cout << "TcpSession::parseDataUnit login insert " << m_vinStr << ": " << ret.second << ' '<< Util::nowTimeStr() << std::endl;
         } else {
-            int n = Resource::GetResource()->GetVechicleConnTable().erase(m_vin);
+            int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
             //            std::cout << "TcpSession::parseDataUnit logout erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
             m_quit = true;
         }

@@ -39,11 +39,11 @@ OBJECTFILES= \
 	${OBJECTDIR}/src/Forward/Logger.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
 	${OBJECTDIR}/src/Forward/PublicServer.o \
-	${OBJECTDIR}/src/Forward/Resource.o \
 	${OBJECTDIR}/src/Forward/ResponseReader.o \
 	${OBJECTDIR}/src/Forward/TcpServer.o \
 	${OBJECTDIR}/src/Forward/TcpSession.o \
 	${OBJECTDIR}/src/Forward/Uploader.o \
+	${OBJECTDIR}/src/Forward/resource.o \
 	${OBJECTDIR}/src/Util.o
 
 
@@ -90,11 +90,6 @@ ${OBJECTDIR}/src/Forward/PublicServer.o: src/Forward/PublicServer.cpp
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/PublicServer.o src/Forward/PublicServer.cpp
 
-${OBJECTDIR}/src/Forward/Resource.o: src/Forward/Resource.cpp
-	${MKDIR} -p ${OBJECTDIR}/src/Forward
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Resource.o src/Forward/Resource.cpp
-
 ${OBJECTDIR}/src/Forward/ResponseReader.o: src/Forward/ResponseReader.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
@@ -114,6 +109,11 @@ ${OBJECTDIR}/src/Forward/Uploader.o: src/Forward/Uploader.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Uploader.o src/Forward/Uploader.cpp
+
+${OBJECTDIR}/src/Forward/resource.o: src/Forward/resource.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/resource.o src/Forward/resource.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

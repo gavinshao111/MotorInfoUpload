@@ -11,8 +11,6 @@
       <itemPath>src/Forward/MotorInfoForward.cpp</itemPath>
       <itemPath>src/Forward/PublicServer.cpp</itemPath>
       <itemPath>src/Forward/PublicServer.h</itemPath>
-      <itemPath>src/Forward/Resource.cpp</itemPath>
-      <itemPath>src/Forward/Resource.h</itemPath>
       <itemPath>src/Forward/ResponseReader.cpp</itemPath>
       <itemPath>src/Forward/ResponseReader.h</itemPath>
       <itemPath>src/Forward/TcpServer.cpp</itemPath>
@@ -23,6 +21,8 @@
       <itemPath>src/Forward/Uploader.h</itemPath>
       <itemPath>src/Util.cpp</itemPath>
       <itemPath>src/Util.h</itemPath>
+      <itemPath>src/Forward/resource.cpp</itemPath>
+      <itemPath>src/Forward/resource.h</itemPath>
       <itemPath>src</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles" displayName="资源文件" projectFiles="true">
@@ -92,10 +92,6 @@
       </item>
       <item path="src/Forward/PublicServer.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/Resource.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/Resource.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/ResponseReader.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/ResponseReader.h" ex="false" tool="3" flavor2="0">
@@ -111,6 +107,10 @@
       <item path="src/Forward/Uploader.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Uploader.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/resource.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/resource.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -161,10 +161,6 @@
       </item>
       <item path="src/Forward/PublicServer.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/Forward/Resource.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Forward/Resource.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/Forward/ResponseReader.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/ResponseReader.h" ex="false" tool="3" flavor2="0">
@@ -180,6 +176,10 @@
       <item path="src/Forward/Uploader.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Uploader.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/resource.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Forward/resource.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.cpp" ex="false" tool="1" flavor2="0">
       </item>

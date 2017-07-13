@@ -14,13 +14,12 @@
 #include "Constant.h"
 using namespace std;
 
-const string Constant::Constant::CmdPlatformLoginStr("platform login");
-const string Constant::CmdPlatformLogoutStr("platform logout");
-const string Constant::CmdVehicleLoginStr("vehicle login");
-const string Constant::CmdVehicleLogoutStr("vehicle logout");
-const string Constant::CmdRealtimeUploadStr("realtime upload");
-const string Constant::CmdReissueUploadStr("reissue upload");
-const string Constant::VinInital("Vin not set");
-const size_t Constant::MaxUploadChannelNum(100);
-
-
+const string Constant::Constant::cmdPlatformLoginStr("platform login");
+const string Constant::cmdPlatformLogoutStr("platform logout");
+const string Constant::cmdVehicleLoginStr("vehicle login");
+const string Constant::cmdVehicleLogoutStr("vehicle logout");
+const string Constant::cmdRealtimeUploadStr("realtime upload");
+const string Constant::cmdReissueUploadStr("reissue upload");
+const string Constant::vinInital("Vin not set");
+const size_t Constant::maxUploadChannelNum(100);
+const string Constant::iniPath("configurtion.ini");

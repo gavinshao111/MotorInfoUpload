@@ -15,7 +15,7 @@
 #include <unistd.h>
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
-#include "Resource.h"
+#include "resource.h"
 #include "Constant.h"
 #include "../Util.h"
 
@@ -26,9 +26,9 @@ using namespace gsocket;
 ResponseReader::ResponseReader(const size_t& no, PublicServer& publicServer) :
 m_responseBuf(512),
 r_publicServer(publicServer),
-m_vin(Constant::VinInital),
+m_vin(Constant::vinInital),
 m_responseStatus(responsereaderstatus::EnumResponseReaderStatus::init),
-r_logger(Resource::GetResource()->GetLogger()) {
+r_logger(resource::getResource()->getLogger()) {
     m_stream << "ResponseReader." << no;
     m_id = m_stream.str();
 }
@@ -41,7 +41,7 @@ ResponseReader::~ResponseReader() {
 
 void ResponseReader::task() {
     try {
-        int timeout = Resource::GetResource()->GetReadResponseTimeOut();
+        int timeout = resource::getResource()->getReadResponseTimeOut();
         for (;;) {
             if (!r_publicServer.isConnected()) {
                 m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::init;
@@ -71,8 +71,8 @@ void ResponseReader::task() {
                 }
                 case responsereaderstatus::EnumResponseReaderStatus::carLoginOk:
                 {
-                    Resource::ConnTable_t::iterator iter = Resource::GetResource()->GetVechicleConnTable().find(m_vin);
-                    if (iter == Resource::GetResource()->GetVechicleConnTable().end())
+                    resource::SessionTable_t::iterator iter = resource::getResource()->getVechicleSessionTable().find(m_vin);
+                    if (iter == resource::getResource()->getVechicleSessionTable().end())
                         r_logger.warn(m_vin, "vin not existing in VechicleConnTable when ResponseReader try to forward response");
                     else
                         iter->second->write(m_responseBuf);

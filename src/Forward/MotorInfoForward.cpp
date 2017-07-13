@@ -13,7 +13,7 @@
 #include <csignal>
 #include"DataFormatForward.h"
 #include "TcpServer.h"
-#include "Resource.h"
+#include "resource.h"
 #include "../Util.h"
 #include "Uploader.h"
 #include "Constant.h"
@@ -37,13 +37,13 @@ boost::condition_variable quit;
 int main(int argc, char** argv) {
     try {
 
-        Resource::GetResource();
+        resource::getResource();
 
         boost::thread TcpServiceThread(tcpServiceTask);
 
-        size_t UploadChannelNumber = Resource::GetResource()->GetUploadChannelNumber();
-        if (UploadChannelNumber > Constant::MaxUploadChannelNum)
-            UploadChannelNumber = Constant::MaxUploadChannelNum;
+        size_t UploadChannelNumber = resource::getResource()->getUploadChannelNumber();
+        if (UploadChannelNumber > Constant::maxUploadChannelNum)
+            UploadChannelNumber = Constant::maxUploadChannelNum;
         std::vector<boost::shared_ptr < boost::thread>> uploadThreads;
         for (size_t i = 0; i < UploadChannelNumber; i++) {
             boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, i);
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         std::signal(SIGTERM, signal_handler);
 
         std::cout << "[INIT] Service started" << std::endl;
-        Resource::GetResource()->GetLogger().info("INIT", "Service started");
+        resource::getResource()->getLogger().info("INIT", "Service started");
         boost::mutex mtx;
         boost::unique_lock<boost::mutex> lk(mtx);
         quit.wait(lk);
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         // debug mode
 //        std::cout << "press any key to quit" << std::endl;
 //        std::cin.get();
-        Resource::GetResource()->GetIoService().stop();
+        resource::getResource()->getIoService().stop();
         TcpServiceThread.join();
         for (std::vector<boost::shared_ptr < boost::thread>>::iterator it = uploadThreads.begin(); it != uploadThreads.end();) {
             boost::shared_ptr<boost::thread> tsptr = *it;
@@ -73,10 +73,10 @@ int main(int argc, char** argv) {
         }
 #endif
     } catch (std::exception &e) {
-        Resource::GetResource()->GetLogger().error("main exception");
-        Resource::GetResource()->GetLogger().errorStream << e.what() << std::endl;
+        resource::getResource()->getLogger().error("main exception");
+        resource::getResource()->getLogger().errorStream << e.what() << std::endl;
     }
-    Resource::GetResource()->GetLogger().info("DONE", "Service shutdown");
+    resource::getResource()->getLogger().info("DONE", "Service shutdown");
     std::cout << "[DONE] Service shutdown" << std::endl;
 
     return 0;
@@ -87,7 +87,7 @@ void signal_handler(int signal) {
 }
 
 void uploadTask(const size_t& no) {
-    Uploader uploader(no, (const EnumRunMode&) Resource::GetResource()->GetMode());
+    Uploader uploader(no, (const EnumRunMode&) resource::getResource()->getMode());
     uploader.task();
 }
 
@@ -123,7 +123,7 @@ void uploadTask(const size_t& no) {
  */
 
 void tcpServiceTask() {
-    boost::asio::io_service& ioService = Resource::GetResource()->GetIoService();
-    TcpServer tcpServer(ioService, Resource::GetResource()->GetEnterprisePlatformTcpServicePort());
+    boost::asio::io_service& ioService = resource::getResource()->getIoService();
+    TcpServer tcpServer(ioService, resource::getResource()->getEnterprisePlatformTcpServicePort());
     ioService.run();
 }

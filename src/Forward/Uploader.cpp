@@ -17,10 +17,11 @@
 #include <bits/basic_string.h>
 #include "ByteBuffer.h"
 #include "../Util.h"
-#include "Resource.h"
+#include "resource.h"
 #include "Constant.h"
 #include "ResponseReader.h"
 #include <iostream>
+#include <boost/lexical_cast.hpp>
 
 using namespace bytebuf;
 using namespace std;
@@ -34,15 +35,15 @@ m_serialNumber(1),
 m_lastloginTime(0),
 m_lastSendTime(0),
 m_uploaderStatus(uploaderstatus::EnumUploaderStatus::init),
-r_resource(Resource::GetResource()),
-r_carDataQueue(r_resource->GetVehicleDataQueue()),
-m_publicServer(r_resource->GetPublicServerIp(), r_resource->GetPublicServerPort()),
-m_vin(Constant::VinInital),
+r_resource(resource::getResource()),
+r_carDataQueue(r_resource->getVehicleDataQueue()),
+m_publicServer(r_resource->getPublicServerIp(), r_resource->getPublicServerPort()),
+m_vin(Constant::vinInital),
 m_responseReader(no, m_publicServer),
-r_logger(r_resource->GetLogger()) {
-    const string& usernameInIni = r_resource->GetPublicServerUserName();
+r_logger(r_resource->getLogger()) {
+    const string& usernameInIni = r_resource->getPublicServerUserName();
     if ((usernameInIni.length() + no) > sizeof (m_loginData.username)
-            || (r_resource->GetPublicServerPassword().length() > sizeof (m_loginData.password)))
+            || (r_resource->getPublicServerPassword().length() > sizeof (m_loginData.password)))
         throw runtime_error("Uploader(): PublicServerUserName or PublicServerPassword Illegal");
     m_stream << "Uploader." << no;
     m_id = m_stream.str();
@@ -52,16 +53,16 @@ r_logger(r_resource->GetLogger()) {
     for (int i = 0; i < no; i++) {
         m_loginData.username[usernameInIni.length() + i] = '1';
     }
-    r_resource->GetPublicServerPassword().copy((char*) m_loginData.password, sizeof (m_loginData.password));
-    m_loginData.encryptionAlgorithm = r_resource->GetEncryptionAlgorithm();
+    r_resource->getPublicServerPassword().copy((char*) m_loginData.password, sizeof (m_loginData.password));
+    m_loginData.encryptionAlgorithm = r_resource->getEncryptionAlgorithm();
     m_loginData.header.encryptionAlgorithm = m_loginData.encryptionAlgorithm;
     m_logoutData.header.encryptionAlgorithm = m_loginData.encryptionAlgorithm;
 
     m_loginData.header.cmdId = enumCmdCode::platformLogin;
     m_logoutData.header.cmdId = enumCmdCode::platformLogout;
 
-    r_resource->GetPaltformId().copy((char*) m_loginData.header.vin, VINLEN);
-    r_resource->GetPaltformId().copy((char*) m_logoutData.header.vin, VINLEN);
+    r_resource->getPaltformId().copy((char*) m_loginData.header.vin, VINLEN);
+    r_resource->getPaltformId().copy((char*) m_logoutData.header.vin, VINLEN);
 
     uint16_t dataUnitLength = sizeof (LoginDataForward_t) - sizeof (DataPacketHeader) - 1;
     m_loginData.header.dataUnitLength = boost::asio::detail::socket_ops::host_to_network_short(dataUnitLength);
@@ -103,7 +104,7 @@ void Uploader::task() {
             try {
                 m_carData = r_carDataQueue.take();
             } catch (boost::thread_interrupted&) {
-//                cout << m_id << " catch thread_interrupted" << endl;
+                //                cout << m_id << " catch thread_interrupted" << endl;
                 break;
             }
             if (!m_carData->hasRemaining()) {
@@ -134,7 +135,7 @@ void Uploader::setupConnection() {
     }
     m_publicServer.close();
     m_publicServer.connect();
-    for (; !m_publicServer.isConnected(); boost::this_thread::sleep(boost::posix_time::seconds(r_resource->GetReSetupPeroid()))) {
+    for (; !m_publicServer.isConnected(); boost::this_thread::sleep(boost::posix_time::seconds(r_resource->getReSetupPeroid()))) {
         r_logger.warn(m_id, "connect refused by Public Server. Reconnecting...");
         m_publicServer.connect();
     }
@@ -194,7 +195,7 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
         int nowYear = timeTM->tm_year;
         localtime(&m_lastloginTime);
 
-        if (m_serialNumber > r_resource->GetMaxSerialNumber()
+        if (m_serialNumber > r_resource->getMaxSerialNumber()
                 || nowDay != timeTM->tm_mday
                 || nowMon != timeTM->tm_mon
                 || nowYear != timeTM->tm_year)
@@ -221,10 +222,10 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::timeout:
                 {
-                    size_t timeToSleep = r_resource->GetLoginTimes() >= i ?
-                            r_resource->GetLoginIntervals() : r_resource->GetLoginIntervals2();
+                    size_t timeToSleep = r_resource->getLoginTimes() >= i ?
+                            r_resource->getLoginIntervals() : r_resource->getLoginIntervals2();
                     m_stream.str("");
-                    m_stream << "read response " << r_resource->GetReadResponseTimeOut()
+                    m_stream << "read response " << r_resource->getReadResponseTimeOut()
                             << "s timeout when login, sleep " << timeToSleep << "s and resend";
                     r_logger.info(m_id, m_stream.str());
                     r_logger.warn(m_id, m_stream.str());
@@ -275,7 +276,7 @@ void Uploader::updateLoginData() {
     m_loginData.time.sec = nowTM->tm_sec;
     m_loginData.serialNumber = m_serialNumber;
     m_loginData.serialNumber = boost::asio::detail::socket_ops::host_to_network_short(m_serialNumber);
-    m_vin.assign(r_resource->GetPaltformId());
+    m_vin.assign(r_resource->getPaltformId());
 }
 
 void Uploader::updateLogoutData() {
@@ -291,7 +292,7 @@ void Uploader::updateLogoutData() {
     m_logoutData.time.min = nowTM->tm_min;
     m_logoutData.time.sec = nowTM->tm_sec;
     m_logoutData.serialNumber = m_loginData.serialNumber;
-    m_vin.assign(r_resource->GetPaltformId());
+    m_vin.assign(r_resource->getPaltformId());
 }
 
 /**
@@ -311,28 +312,28 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
                 dataToSend = boost::make_shared<ByteBuffer>((uint8_t*) & m_loginData, sizeof (LoginDataForward_t));
                 m_loginData.checkCode = Util::generateBlockCheckCharacter(*dataToSend, 2, sizeof (LoginDataForward_t) - 3);
                 collectTime = time(NULL);
-                cmdTypeStr = Constant::CmdPlatformLoginStr;
+                cmdTypeStr = Constant::cmdPlatformLoginStr;
                 break;
             case enumCmdCode::platformLogout:
                 dataToSend = boost::make_shared<ByteBuffer>((uint8_t*) & m_logoutData, sizeof (LogoutDataForward_t));
                 m_logoutData.checkCode = Util::generateBlockCheckCharacter(*dataToSend, 2, sizeof (LogoutDataForward_t) - 3);
                 collectTime = time(NULL);
-                cmdTypeStr = Constant::CmdPlatformLogoutStr;
+                cmdTypeStr = Constant::cmdPlatformLogoutStr;
                 break;
             case enumCmdCode::vehicleSignalDataUpload:
-                cmdTypeStr = Constant::CmdRealtimeUploadStr;
+                cmdTypeStr = Constant::cmdRealtimeUploadStr;
                 dataToSend = m_carData;
                 break;
             case enumCmdCode::reissueUpload:
-                cmdTypeStr = Constant::CmdReissueUploadStr;
+                cmdTypeStr = Constant::cmdReissueUploadStr;
                 dataToSend = m_carData;
                 break;
             case enumCmdCode::vehicleLogin:
-                cmdTypeStr = Constant::CmdVehicleLoginStr;
+                cmdTypeStr = Constant::cmdVehicleLoginStr;
                 dataToSend = m_carData;
                 break;
             case enumCmdCode::vehicleLogout:
-                cmdTypeStr = Constant::CmdVehicleLogoutStr;
+                cmdTypeStr = Constant::cmdVehicleLogoutStr;
                 dataToSend = m_carData;
                 break;
             default:
@@ -361,9 +362,9 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
         m_stream << sizeToSend << " bytes of " << cmdTypeStr << " data uploaded";
         r_logger.info(m_vin, m_stream.str());
 
-        if (r_resource->GetUploadChannelNumber() > 1)
-            boost::unique_lock<boost::mutex> lk(r_resource->GetMsgMtx());
-        outputMsg(r_resource->GetMessageOs(), m_vin, collectTime, m_lastSendTime, dataToSend.get());
+        if (r_resource->getUploadChannelNumber() > 1)
+            boost::unique_lock<boost::mutex> lk(r_resource->getMsgMtx());
+        outputMsg(r_resource->getMessageOs(), r_resource->getSystem(), m_vin, collectTime, m_lastSendTime, dataToSend.get());
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         r_logger.warn("Uploader::tcpSendData exception");
         r_logger.warnStream << e.what() << std::endl;
@@ -371,13 +372,27 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
     }
 }
 
-void Uploader::outputMsg(ostream& out, const string& vin, const time_t& collectTime, const time_t& sendTime, const ByteBuffer* data/* = NULL*/) {
+void Uploader::outputMsg(ostream& out, const enumSystem& system, const string& vin,
+        const time_t& collectTime, const time_t& sendTime, const ByteBuffer* data/* = NULL*/) {
     out << setiosflags(ios::left)
             << setw(21) << setfill(' ') << vin
             << setw(23) << setfill(' ') << Util::timeToStr(collectTime)
             << setw(23) << setfill(' ') << Util::timeToStr(sendTime);
     if (data != NULL) {
-        data->outputAsDec(out);
+        switch (system) {
+            case enumSystem::oct:
+                data->outputAsOct(out);
+                break;
+            case enumSystem::dec:
+                data->outputAsDec(out);
+                break;
+            case enumSystem::bin:
+            case enumSystem::hex:
+                data->outputAsHex(out);
+                break;
+            default:
+                throw runtime_error("unrecognize system enumeration: " + boost::lexical_cast<string>(system));
+        }
     }
     out << endl;
 }
