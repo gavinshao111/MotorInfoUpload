@@ -14,6 +14,8 @@
 #include "Constant.h"
 using namespace std;
 
+
+
 const string Constant::Constant::cmdPlatformLoginStr("platform login");
 const string Constant::cmdPlatformLogoutStr("platform logout");
 const string Constant::cmdVehicleLoginStr("vehicle login");
@@ -23,3 +25,5 @@ const string Constant::cmdReissueUploadStr("reissue upload");
 const string Constant::vinInital("Vin not set");
 const size_t Constant::maxUploadChannelNum(100);
 const string Constant::iniPath("configurtion.ini");
+const string Constant::defaultTimeFormat("%Y-%m-%d %H:%M:%S");  // "%d-%02d-%02d %02d:%02d:%02d"
+const string Constant::timeFormatForFile("%Y%m%d_%H%M%S");

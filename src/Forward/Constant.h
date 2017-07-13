@@ -29,6 +29,8 @@ public:
     const static std::string vinInital;
     const static size_t maxUploadChannelNum;
     const static std::string iniPath;
+    const static std::string defaultTimeFormat;
+    const static std::string timeFormatForFile;
 private:
 
 };

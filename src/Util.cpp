@@ -23,13 +23,9 @@
 #include <arpa/inet.h>
 #include <stdexcept>
 #include <iostream>
+#include "Forward/Constant.h"
 
 using namespace std;
-
-#define TIMEFORMAT "%Y-%m-%d %H:%M:%S"
-#define TIMEFORMAT_ "%d-%02d-%02d %02d:%02d:%02d"
-
-string Util::s_nowtimeStr = "";
 
 Util::Util() {
 }
@@ -85,20 +81,6 @@ int Util::setupConnectionToTCPServer(const string& ip, const int& port, const bo
     return fd;
 }
 
-string Util::timeToStr(const time_t& time) {
-    struct tm* timeTM;
-    char strTime[22] = {0};
-
-    timeTM = localtime(&time);
-    strftime(strTime, sizeof (strTime) - 1, TIMEFORMAT, timeTM);
-    string timeStr(strTime);
-    return timeStr;
-}
-
-string Util::nowTimeStr() {
-    return timeToStr(time(NULL));
-}
-
 void Util::sendByTcp(const int& fd, const void* ptr, const size_t& size) {
     size_t sentNum = 0;
     uint8_t* _ptr = (uint8_t*) ptr;
@@ -148,8 +130,23 @@ uint8_t Util::generateBlockCheckCharacter(const bytebuf::ByteBuffer& byteBuffer,
 //    cout << "[" << id << "] " << message1 << message2 << message3 << message4 << message5 << " " << nowtimeStr() << "\n" << endl;
 //}
 
-const string& Util::nowtimeStr() {
-    time_t now = time(NULL);
-    s_nowtimeStr.assign(asctime(localtime(&now)));
-    return s_nowtimeStr;
+string Util::timeToStr(const time_t& time, const string& format) {
+    struct tm* timeTM;
+    char strTime[100] = {0};
+
+    timeTM = localtime(&time);
+    strftime(strTime, sizeof (strTime) - 1, format.c_str(), timeTM);
+    string timeStr(strTime);
+    return timeStr;
+}
+
+string Util::timeToStr(const time_t& time) {
+    return timeToStr(time, Constant::defaultTimeFormat);
+}
+
+string Util::timeToStr(const string& format) {
+    return timeToStr(time(NULL), format);
+}
+string Util::timeToStr() {
+    return timeToStr(Constant::defaultTimeFormat);
 }

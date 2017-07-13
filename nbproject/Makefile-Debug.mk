@@ -68,7 +68,7 @@ LDLIBSOPTIONS=-L../GavinLib/ByteBuffer/dist -L../GavinLib/GSocket/dist
 	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motorinfoupload
 
 motorinfoupload: ${OBJECTFILES}
-	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgsocket -lboost_thread -lboost_system
+	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem
 
 ${OBJECTDIR}/src/Forward/Constant.o: src/Forward/Constant.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
