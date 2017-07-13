@@ -275,6 +275,7 @@ void Uploader::updateLoginData() {
     m_loginData.time.sec = nowTM->tm_sec;
     m_loginData.serialNumber = m_serialNumber;
     m_loginData.serialNumber = boost::asio::detail::socket_ops::host_to_network_short(m_serialNumber);
+    m_vin.assign(r_resource->GetPaltformId());
 }
 
 void Uploader::updateLogoutData() {
@@ -290,6 +291,7 @@ void Uploader::updateLogoutData() {
     m_logoutData.time.min = nowTM->tm_min;
     m_logoutData.time.sec = nowTM->tm_sec;
     m_logoutData.serialNumber = m_loginData.serialNumber;
+    m_vin.assign(r_resource->GetPaltformId());
 }
 
 /**
