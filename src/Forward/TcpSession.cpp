@@ -95,7 +95,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
         }
         
         // special case: 只上传 86687302051846000 的数据
-        if (m_vin.compare("86687302051846000") != 0)
+        if (resource::getResource()->getMode() != EnumRunMode::release && m_vin.compare("86687302051846000") != 0)
             return;
 
         readDataUnit();
