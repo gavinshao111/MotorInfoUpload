@@ -104,9 +104,8 @@ void Uploader::task() {
             if (m_mode == EnumRunMode::platformCompliance && offline) {
                 m_publicServer.close();
                 isConnectWithPublicServer = false;
-                cout << "close session with public server, sleep 10 min..." << flush;
+                r_logger.info("Uploader", "close session with public server, offline for 10 min...");
                 boost::this_thread::sleep(boost::posix_time::minutes(10));
-                cout << " done" << endl;
                 offline = false;
             }
             if (!m_publicServer.isConnected()) {
