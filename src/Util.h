@@ -36,6 +36,7 @@ public:
 //    static void output(const std::string& id, const std::string& message1, const std::string& message2, const std::string& message3);
 //    static void output(const std::string& id, const std::string& message1, const std::string& message2, const std::string& message3, const std::string& message4);
 //    static void output(const std::string& id, const std::string& message1, const std::string& message2, const std::string& message3, const std::string& message4, const std::string& message5);
+
     static std::string timeToStr(const std::time_t& time, const std::string& format);
     static std::string timeToStr(const std::string& format);
     static std::string timeToStr(const std::time_t& time);

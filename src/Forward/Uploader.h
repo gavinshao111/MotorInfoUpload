@@ -43,6 +43,7 @@ public:
     virtual ~Uploader();
     void task();
 
+    static bool isConnectWithPublicServer;
 private:
     Uploader(const Uploader& orig);
     void tcpSend();

@@ -27,6 +27,8 @@ using namespace bytebuf;
 using namespace std;
 using namespace gsocket;
 
+extern bool offline;
+bool Uploader::isConnectWithPublicServer(false);
 // no 从0开始
 
 Uploader::Uploader(const size_t& no, const EnumRunMode& mode) :
@@ -51,6 +53,8 @@ r_logger(r_resource->getLogger()) {
     // 平台符合性检测：多链路的平台唯一码、密码与原链路相同，仅用户名为原用户名+“1”
     // 老赵：第no条辅链路，就加no个字符“1”
     for (int i = 0; i < no; i++) {
+        if (sizeof (m_loginData.username) <= usernameInIni.length() + i)
+            break;
         m_loginData.username[usernameInIni.length() + i] = '1';
     }
     r_resource->getPublicServerPassword().copy((char*) m_loginData.password, sizeof (m_loginData.password));
@@ -80,6 +84,7 @@ void Uploader::task() {
     try {
         switch (m_mode) {
             case EnumRunMode::vehicleCompliance:
+            case EnumRunMode::platformCompliance:
                 setupConnection();
                 for (int i = 0; i < 5; i++) {
                     setupConnAndLogin(false);
@@ -90,14 +95,20 @@ void Uploader::task() {
             case EnumRunMode::release:
                 //setupConnAndLogin();
                 break;
-            case EnumRunMode::platformCompliance:
-                throw runtime_error("platformCompliance not supportted yet");
-                break;
             default:
                 m_stream << "unrecognize run mode: " << (int) m_mode;
                 throw runtime_error(m_stream.str());
         }
         for (;;) {
+            // 平台符合性检测需要离线10min
+            if (m_mode == EnumRunMode::platformCompliance && offline) {
+                m_publicServer.close();
+                isConnectWithPublicServer = false;
+                cout << "close session with public server, sleep 10 min..." << flush;
+                boost::this_thread::sleep(boost::posix_time::minutes(10));
+                cout << " done" << endl;
+                offline = false;
+            }
             if (!m_publicServer.isConnected()) {
                 setupConnAndLogin();
             }
@@ -124,6 +135,7 @@ void Uploader::task() {
     } catch (boost::thread_interrupted&) {
     }
     m_publicServer.close();
+    isConnectWithPublicServer = false;
     responseReaderThread.interrupt();
     responseReaderThread.join();
     r_logger.info(m_id, "quiting...");
@@ -141,10 +153,10 @@ void Uploader::setupConnection() {
         m_publicServer.connect();
     }
     r_logger.info(m_id, "connection with public platform established");
+    isConnectWithPublicServer = true;
 }
 
 /*
- * Generator 在收到MQ然后将车机数据放入 dataQueue 时需要先判断网络是否里连接，若否设为补发。
  * 国标：重发本条实时信息（应该是调整后重发）。每隔1min重发，最多发送3次
  * 国标2：如客户端平台收到应答错误，应及时与服务端平台进行沟通，对登入信息进行调整。
  * 我的理解：由于平台无法做到实时调整，只能转发错误回应给车机，继续发下一条。所以不再重发本条实时信息，等车机调整后直接转发。
@@ -161,8 +173,8 @@ void Uploader::forwardCarData() {
     m_uploaderStatus = uploaderstatus::EnumUploaderStatus::init;
     tcpSendData(m_packetHdr->cmdId);
     if (m_uploaderStatus == uploaderstatus::EnumUploaderStatus::connectionClosed) {
-        if (m_packetHdr->cmdId == enumCmdCode::vehicleSignalDataUpload)
-            m_packetHdr->cmdId = enumCmdCode::reissueUpload;
+//        if (m_packetHdr->cmdId == enumCmdCode::realtimeUpload)
+//            m_packetHdr->cmdId = enumCmdCode::reissueUpload;
         r_carDataQueue.put(m_carData, true);
     }
 }
@@ -219,7 +231,7 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
                     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
-                    //                setupConnection();
+                    isConnectWithPublicServer = false;
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::timeout:
                 {
@@ -321,7 +333,7 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
                 collectTime = time(NULL);
                 cmdTypeStr = Constant::cmdPlatformLogoutStr;
                 break;
-            case enumCmdCode::vehicleSignalDataUpload:
+            case enumCmdCode::realtimeUpload:
                 cmdTypeStr = Constant::cmdRealtimeUploadStr;
                 dataToSend = m_carData;
                 break;

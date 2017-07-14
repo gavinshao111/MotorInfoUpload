@@ -14,8 +14,6 @@
 #include "Constant.h"
 using namespace std;
 
-
-
 const string Constant::Constant::cmdPlatformLoginStr("platform login");
 const string Constant::cmdPlatformLogoutStr("platform logout");
 const string Constant::cmdVehicleLoginStr("vehicle login");

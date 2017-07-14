@@ -22,10 +22,12 @@
 #include <sstream>
 #include <bits/stl_map.h>
 #include <bits/basic_string.h>
+#include <boost/lexical_cast.hpp>
 
 #include "../Util.h"
 #include "resource.h"
 #include "Constant.h"
+#include "Uploader.h"
 
 using namespace boost::asio;
 
@@ -92,10 +94,10 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
             m_vin.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
         }
 
-        if (m_hdr->cmdId == enumCmdCode::vehicleSignalDataUpload)
-            m_logger.info(m_vin, Constant::cmdRealtimeUploadStr);
-        else if (m_hdr->cmdId == enumCmdCode::reissueUpload)
-            m_logger.info(m_vin, Constant::cmdReissueUploadStr);
+//        if (m_hdr->cmdId == enumCmdCode::realtimeUpload)
+//            m_logger.info(m_vin, Constant::cmdRealtimeUploadStr);
+//        else if (m_hdr->cmdId == enumCmdCode::reissueUpload)
+//            m_logger.info(m_vin, Constant::cmdReissueUploadStr);
 
         readDataUnit();
     } catch (std::runtime_error& e) {
@@ -197,7 +199,7 @@ void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
 void TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
     int cmdId = m_hdr->cmdId;
-    if (cmdId == enumCmdCode::reissueUpload || cmdId == enumCmdCode::vehicleSignalDataUpload) {
+    if (cmdId == enumCmdCode::reissueUpload || cmdId == enumCmdCode::realtimeUpload) {
         BytebufSPtr_t rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
 
         try {
@@ -273,15 +275,29 @@ void TcpSession::parseDataUnit() {
         }
         if (m_packetRef->remaining() != 1)
             throw std::runtime_error("invalid packet format: m_packetRef->remaining expect to be 1 after parse data unit");
+        
+        if (cmdId == enumCmdCode::realtimeUpload && !Uploader::isConnectWithPublicServer)
+            ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
 
         uint16_t newDataUnitLength = rtData->position() - sizeof (DataPacketHeader_t);
         ((DataPacketHeader_t*) rtData->array())->dataUnitLength = htons(newDataUnitLength);
+        
         rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position() - 2));
         rtData->flip();
         resource::getResource()->getVehicleDataQueue().put(rtData);
+        std::string type = cmdId == enumCmdCode::reissueUpload ? 
+            Constant::cmdReissueUploadStr : Constant::cmdRealtimeUploadStr;
+        m_logger.info(m_vin, type + " data put into queue, now queue size: "
+                + boost::lexical_cast<std::string>(resource::getResource()->getVehicleDataQueue().remaining()));
     } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
         m_packetRef->position(0);
         resource::getResource()->getVehicleDataQueue().put(m_packetRef);
+        std::string type = cmdId == enumCmdCode::vehicleLogin ? 
+            Constant::cmdVehicleLoginStr : Constant::cmdVehicleLogoutStr;
+        
+        size_t size = resource::getResource()->getVehicleDataQueue().remaining();
+        m_logger.info(m_vin, type + " data put into queue, now queue size: "
+                + boost::lexical_cast<std::string>(size));
         boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
         if (cmdId == enumCmdCode::vehicleLogin) {
             std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;

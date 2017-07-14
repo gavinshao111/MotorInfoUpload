@@ -39,7 +39,7 @@ typedef enum {
 typedef enum {
     init = 0,
     vehicleLogin = 1,
-    vehicleSignalDataUpload = 2,
+    realtimeUpload = 2,
     reissueUpload = 3,
     vehicleLogout = 4,
     platformLogin = 5,

@@ -33,6 +33,8 @@ void tcpServiceTask();
 void signal_handler(int signal);
 
 boost::condition_variable quit;
+bool offline = false;
+std::vector<boost::shared_ptr < boost::thread>> uploadThreads;
 
 int main(int argc, char** argv) {
     try {
@@ -44,7 +46,7 @@ int main(int argc, char** argv) {
         size_t UploadChannelNumber = resource::getResource()->getUploadChannelNumber();
         if (UploadChannelNumber > Constant::maxUploadChannelNum)
             UploadChannelNumber = Constant::maxUploadChannelNum;
-        std::vector<boost::shared_ptr < boost::thread>> uploadThreads;
+
         for (size_t i = 0; i < UploadChannelNumber; i++) {
             boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, i);
             uploadThreads.push_back(uploadThread);
@@ -54,6 +56,12 @@ int main(int argc, char** argv) {
         std::signal(SIGINT, signal_handler);
         std::signal(SIGTERM, signal_handler);
 
+        // 平台符合性检测需要离线10min，通过 SIGUSR1 触发
+        if (resource::getResource()->getMode() == EnumRunMode::platformCompliance) {
+            std::signal(SIGUSR1, signal_handler);
+            std::signal(SIGUSR2, signal_handler);
+        }
+
         std::cout << "[INIT] Service started" << std::endl;
         resource::getResource()->getLogger().info("INIT", "Service started");
         boost::mutex mtx;
@@ -61,8 +69,8 @@ int main(int argc, char** argv) {
         quit.wait(lk);
 
         // debug mode
-//        std::cout << "press any key to quit" << std::endl;
-//        std::cin.get();
+        //        std::cout << "press any key to quit" << std::endl;
+        //        std::cin.get();
         resource::getResource()->getIoService().stop();
         TcpServiceThread.join();
         for (std::vector<boost::shared_ptr < boost::thread>>::iterator it = uploadThreads.begin(); it != uploadThreads.end();) {
@@ -83,7 +91,20 @@ int main(int argc, char** argv) {
 }
 
 void signal_handler(int signal) {
-    quit.notify_all();
+    switch (signal) {
+        case SIGUSR1:
+            offline = true;
+            break;
+        case SIGUSR2:
+        {
+            size_t no = uploadThreads.size();
+            boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, no);
+            uploadThreads.push_back(uploadThread);
+            break;
+        }
+        default:
+            quit.notify_all();
+    }
 }
 
 void uploadTask(const size_t& no) {
@@ -120,6 +141,10 @@ void uploadTask(const size_t& no) {
  * 10、 多车多链路：企业应通过主链路及新开通的辅链路发送不同运行状态下的不同
  * 车辆数据到国家平台，车辆数不应少于3台，数据应维持发送15分钟以上。
  * 
+ * 1. 5次登录登出
+ * 2. 转发车辆数据
+ * 3. 离线10分钟
+ * 4. 多链路
  */
 
 void tcpServiceTask() {
