@@ -34,9 +34,6 @@ void TcpServer::acceptHandler(SessionRef_t session, const boost::system::error_c
         return;
     }
     startAccept();
-
-//    Util::output("TcpServer", "connection arrived");
-    resource::getResource()->getLogger().info("TcpServer", "connection arrived");
     session->readHeader();
 }
 
