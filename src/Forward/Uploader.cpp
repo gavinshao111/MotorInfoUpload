@@ -137,6 +137,7 @@ void Uploader::setupConnection() {
     m_publicServer.connect();
     for (; !m_publicServer.isConnected(); boost::this_thread::sleep(boost::posix_time::seconds(r_resource->getReSetupPeroid()))) {
         r_logger.warn(m_id, "connect refused by Public Server. Reconnecting...");
+        r_logger.warnStream << "data queue size: " << r_carDataQueue.remaining() << endl;
         m_publicServer.connect();
     }
     r_logger.info(m_id, "connection with public platform established");
