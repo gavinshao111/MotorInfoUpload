@@ -44,7 +44,7 @@ m_vin(Constant::vinInital),
 m_responseReader(no, m_publicServer),
 r_logger(r_resource->getLogger()) {
     const string& usernameInIni = r_resource->getPublicServerUserName();
-    if ((usernameInIni.length() + no) > sizeof (m_loginData.username)
+    if (usernameInIni.length() > sizeof (m_loginData.username)
             || (r_resource->getPublicServerPassword().length() > sizeof (m_loginData.password)))
         throw runtime_error("Uploader(): PublicServerUserName or PublicServerPassword Illegal");
     m_stream << "Uploader." << no;
@@ -104,7 +104,7 @@ void Uploader::task() {
             if (m_mode == EnumRunMode::platformCompliance && offline) {
                 m_publicServer.close();
                 isConnectWithPublicServer = false;
-                r_logger.info("Uploader", "close session with public server, offline for 10 min...");
+                r_logger.info(m_id, "close session with public server, offline for 10 min...");
                 boost::this_thread::sleep(boost::posix_time::minutes(10));
                 offline = false;
             }
