@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
         std::signal(SIGINT, signal_handler);
         std::signal(SIGTERM, signal_handler);
 
-        // 平台符合性检测需要离线10min，通过 SIGUSR1 触发
+        // 平台符合性检测需要离线10min，通过 SIGUSR1 触发；增加辅链路，通过 SIGUSR2 触发
         if (resource::getResource()->getMode() == EnumRunMode::platformCompliance) {
             std::signal(SIGUSR1, signal_handler);
             std::signal(SIGUSR2, signal_handler);
@@ -108,8 +108,13 @@ void signal_handler(int signal) {
 }
 
 void uploadTask(const size_t& no) {
-    Uploader uploader(no, (const EnumRunMode&) resource::getResource()->getMode());
-    uploader.task();
+    try {
+        Uploader uploader(no, (const EnumRunMode&) resource::getResource()->getMode());
+        uploader.task();
+    } catch (std::exception &e) {
+        resource::getResource()->getLogger().error("uploadTask exception");
+        resource::getResource()->getLogger().errorStream << e.what() << std::endl;
+    }
 }
 
 /* 车辆符合性检测：
@@ -148,7 +153,12 @@ void uploadTask(const size_t& no) {
  */
 
 void tcpServiceTask() {
-    boost::asio::io_service& ioService = resource::getResource()->getIoService();
-    TcpServer tcpServer(ioService, resource::getResource()->getEnterprisePlatformTcpServicePort());
-    ioService.run();
+    try {
+        boost::asio::io_service& ioService = resource::getResource()->getIoService();
+        TcpServer tcpServer(ioService, resource::getResource()->getEnterprisePlatformTcpServicePort());
+        ioService.run();
+    } catch (std::exception &e) {
+        resource::getResource()->getLogger().error("tcpServiceTask exception");
+        resource::getResource()->getLogger().errorStream << e.what() << std::endl;
+    }
 }
