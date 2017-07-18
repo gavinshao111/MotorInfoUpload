@@ -23,6 +23,7 @@
 #include <bits/stl_map.h>
 #include <bits/basic_string.h>
 #include <boost/lexical_cast.hpp>
+#include <vector>
 
 #include "../Util.h"
 #include "resource.h"
@@ -94,9 +95,16 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
             m_vin.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
         }
         
-        // special case: 只上传 86687302051846000 的数据
-        if (resource::getResource()->getMode() != EnumRunMode::release && m_vin.compare("86687302051846000") != 0)
-            return;
+        // 若在符合性检测下，只上传指定车机的数据
+        if (resource::getResource()->getMode() != EnumRunMode::release) {
+            const std::vector<std::string>& vins = resource::getResource()->getVinAllowedArray();
+            for (int i = 0;; i++) {
+                if (i >= vins.size())
+                    return;
+                if (0 == m_vin.compare(vins[i]))
+                    break;
+            }
+        }
 
         readDataUnit();
     } catch (std::runtime_error& e) {

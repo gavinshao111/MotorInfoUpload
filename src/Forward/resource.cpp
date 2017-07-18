@@ -47,7 +47,8 @@ resource::resource() {
     heartBeatCycle = pt.get<int>(section + ".HeartBeatCycle", 1);
     int MaxVehicleDataQueueSize = pt.get<int>(section + ".MaxVehicleDataQueueSize", 1);
     vehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue < BytebufSPtr_t >> (MaxVehicleDataQueueSize);
-
+    string vinAllowed = pt.get<string>(section + ".VinAllowed", "");
+    vinAllowedArray = Util::str_split(vinAllowed, ',');
     section.assign("DataPacket");
     encryptionAlgorithm = (enumEncryptionAlgorithm) pt.get<int>(section + ".EncryptionAlgorithm", 1);
     paltformId = pt.get<string>(section + ".PaltformId", "");

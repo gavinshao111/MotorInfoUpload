@@ -131,6 +131,10 @@ public:
         return system;
     }
 
+    const std::vector<std::string>& getVinAllowedArray() const {
+        return vinAllowedArray;
+    }
+
 private:
     resource();
     
@@ -191,6 +195,9 @@ private:
     std::ofstream messageOs;
     boost::mutex msgMtx;
     enumSystem system;
+    // 符合性检测下允许上传车机vin列表，以逗号隔开    
+    // 构造函数中为vinAllowedArray重新赋值（移动）前会先析构其默认构造的资源，由于其默认构造资源开销小，所以可以这样写。
+    std::vector<std::string> vinAllowedArray;
 };
 
 #endif /* RESOURCE_H */
