@@ -78,7 +78,6 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
             }
 
             if (error == error::operation_aborted) {
-                m_logger.info("TcpSession::readHeaderHandler", "read operation canceled may because time out");
             } else if (error == error::eof) {
                 m_logger.info("TcpSession::readHeaderHandler", "session closed by peer");
             } else {
@@ -138,7 +137,6 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
             }
 
             if (error == error::operation_aborted) {
-                m_logger.info(m_vin, "read operation canceled may because time out");
             } else if (error == error::eof) {
                 m_logger.info(m_vin, "session closed by peer");
             } else {
