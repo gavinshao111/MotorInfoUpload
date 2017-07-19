@@ -87,10 +87,11 @@ void Uploader::task() {
             case EnumRunMode::platformCompliance:
                 setupConnection();
                 for (int i = 0; i < 5; i++) {
-                    setupConnAndLogin(false);
+                    setupConnAndLogin(true);
                     logout();
                 }
                 r_logger.info(m_id, "login logout 5 times done ");
+                setupConnAndLogin(true);
                 break;
             case EnumRunMode::release:
                 //setupConnAndLogin();
