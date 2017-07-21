@@ -82,6 +82,7 @@ void ResponseReader::task() {
                 case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
                     r_logger.warn(m_vin, "bad response format: ");
                     r_logger.warnStream << m_stream.str() << std::endl;
+                    break;
                 default:
                     m_stream.str("");
                     m_stream << "ResponseReader::forwardCarData(): unrecognize SenderStatus code: " << m_responseStatus;
