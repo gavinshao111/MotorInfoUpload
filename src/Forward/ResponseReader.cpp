@@ -153,14 +153,14 @@ void ResponseReader::readResponse(const size_t& timeout) {
         cout << m_stream.str() << endl;
         return;
     }
-    if (responseDataUnitLen != sizeof (TimeForward_t)) {
-        m_stream << "[" << m_vin << "] "
-                << "responseDataUnitLength in public server's response expected to 6, actually is "
-                << responseDataUnitLen;
-        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
-        cout << m_stream.str() << endl;
-        return;
-    }
+//    if (responseDataUnitLen != sizeof (TimeForward_t)) {
+//        m_stream << "[" << m_vin << "] "
+//                << "responseDataUnitLength in public server's response expected to 6, actually is "
+//                << responseDataUnitLen;
+//        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+//        cout << m_stream.str() << endl;
+//        return;
+//    }
     m_packetHdr = packetHdrTmp;
     responseTime = (TimeForward_t*) (m_responseBuf.array() + sizeof (DataPacketHeader_t));
 
