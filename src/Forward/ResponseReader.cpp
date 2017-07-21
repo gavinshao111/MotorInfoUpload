@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
+#include <iostream>
 #include "resource.h"
 #include "Constant.h"
 #include "../Util.h"
@@ -114,6 +115,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
             m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
             m_stream << "start code expect to be 35, 35(##), actually is "
                     << (int) packetHdrTmp->startCode[0] << (int) packetHdrTmp->startCode[1];
+            cout << m_stream.str() << endl;
             return;
         }
 
@@ -125,6 +127,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
         if (responseDataUnitLen > m_responseBuf.remaining()) {
             m_stream << "Illegal responseHdr->responseDataUnitLength: " << responseDataUnitLen;
             m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+            cout << m_stream.str() << endl;
             return;
         }
         r_publicServer.read(m_responseBuf, responseDataUnitLen + 1, timeout);
@@ -135,6 +138,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
         r_logger.warn("ResponseReader::readResponse");
         r_logger.warnStream << e.what() << std::endl;
         m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::connectionClosed;
+        cout << m_stream.str() << endl;
         return;
     }
     m_responseBuf.flip();
@@ -145,6 +149,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
                 << "BCC in public server's response check fail, expected to be " << chechCode
                 << ", actually is " << m_responseBuf.get(m_responseBuf.limit() - 1);
         m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+        cout << m_stream.str() << endl;
         return;
     }
     if (responseDataUnitLen != sizeof (TimeForward_t)) {
@@ -152,6 +157,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
                 << "responseDataUnitLength in public server's response expected to 6, actually is "
                 << responseDataUnitLen;
         m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+        cout << m_stream.str() << endl;
         return;
     }
     m_packetHdr = packetHdrTmp;
