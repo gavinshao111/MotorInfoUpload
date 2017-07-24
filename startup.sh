@@ -5,4 +5,4 @@
 #
 # Created on 2017-7-6, 20:39:13
 #
-./motorinfoupload &
+./motorinfoupload > running.log &
