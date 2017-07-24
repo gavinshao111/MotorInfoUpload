@@ -53,7 +53,7 @@ private:
     void updateHeader();
     void tcpSendData(const uint8_t& cmd);
     void forwardCarData();
-    void setupConnAndLogin(const bool& needResponse = true);
+    void setupConnAndLogin();
     void logout();
     void static outputMsg(std::ostream& out, const enumSystem& system, const std::string& vin,
             const time_t& collectTime, const time_t& sendTime, const bytebuf::ByteBuffer* data = NULL);

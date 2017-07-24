@@ -45,11 +45,11 @@ void ResponseReader::task() {
         int timeout = resource::getResource()->getReadResponseTimeOut();
         for (;;) {
             if (!r_publicServer.isConnected()) {
-                m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::init;
+                status(responsereaderstatus::EnumResponseReaderStatus::init);
                 try {
                     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
                 } catch (boost::thread_interrupted&) {
-//                    cout << m_id << " catch thread_interrupted" << endl;
+                    //                    cout << m_id << " catch thread_interrupted" << endl;
                     break;
                 }
                 continue;
@@ -63,21 +63,19 @@ void ResponseReader::task() {
                     r_logger.warn(m_id, "read timeout");
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseOk:
+                    if (m_responsePacketType == enumCmdCode::vehicleLogin) {
+                        resource::SessionTable_t::iterator iter = resource::getResource()->getVechicleSessionTable().find(m_vin);
+                        if (iter == resource::getResource()->getVechicleSessionTable().end())
+                            r_logger.warn(m_vin, "vin not existing in VechicleConnTable when ResponseReader try to forward response");
+                        else
+                            iter->second->write(m_responseBuf);
+                    }
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
                 {
                     r_logger.info(m_vin);
                     r_logger.infoStream << "Sender forward car data response not ok, response flag: "
                             << (int) m_packetHdr->responseFlag << std::endl;
-                }
-                case responsereaderstatus::EnumResponseReaderStatus::carLoginOk:
-                {
-                    resource::SessionTable_t::iterator iter = resource::getResource()->getVechicleSessionTable().find(m_vin);
-                    if (iter == resource::getResource()->getVechicleSessionTable().end())
-                        r_logger.warn(m_vin, "vin not existing in VechicleConnTable when ResponseReader try to forward response");
-                    else
-                        iter->second->write(m_responseBuf);
-                    break;
                 }
                 case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
                     r_logger.warn(m_vin, "bad response format: ");
@@ -113,7 +111,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
     try {
         r_publicServer.read(m_responseBuf, 2, timeout);
         if (packetHdrTmp->startCode[0] != '#' || packetHdrTmp->startCode[1] != '#') {
-            m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+            status(responsereaderstatus::EnumResponseReaderStatus::responseFormatErr);
             m_stream << "start code expect to be 35, 35(##), actually is "
                     << (int) packetHdrTmp->startCode[0] << (int) packetHdrTmp->startCode[1];
             cout << m_stream.str() << endl;
@@ -121,24 +119,25 @@ void ResponseReader::readResponse(const size_t& timeout) {
         }
 
         r_publicServer.read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout);
+        m_responsePacketType = (enumCmdCode)packetHdrTmp->cmdId;
         m_vin.assign((char*) packetHdrTmp->vin, sizeof (packetHdrTmp->vin));
         responseDataUnitLen = boost::asio::detail::socket_ops::network_to_host_short(
                 packetHdrTmp->dataUnitLength);
 
         if (responseDataUnitLen > m_responseBuf.remaining()) {
             m_stream << "Illegal responseHdr->responseDataUnitLength: " << responseDataUnitLen;
-            m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+            status(responsereaderstatus::EnumResponseReaderStatus::responseFormatErr);
             cout << m_stream.str() << endl;
             return;
         }
         r_publicServer.read(m_responseBuf, responseDataUnitLen + 1, timeout);
     } catch (SocketTimeoutException& e) {
-        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::timeout;
+        status(responsereaderstatus::EnumResponseReaderStatus::timeout);
         return;
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         r_logger.warn("ResponseReader::readResponse");
         r_logger.warnStream << e.what() << std::endl;
-        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::connectionClosed;
+        status(responsereaderstatus::EnumResponseReaderStatus::connectionClosed);
         cout << m_stream.str() << endl;
         return;
     }
@@ -149,36 +148,45 @@ void ResponseReader::readResponse(const size_t& timeout) {
         m_stream << "[" << m_vin << "] "
                 << "BCC in public server's response check fail, expected to be " << chechCode
                 << ", actually is " << m_responseBuf.get(m_responseBuf.limit() - 1);
-        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+        status(responsereaderstatus::EnumResponseReaderStatus::responseFormatErr);
         cout << m_stream.str() << endl;
         return;
     }
-//    if (responseDataUnitLen != sizeof (TimeForward_t)) {
-//        m_stream << "[" << m_vin << "] "
-//                << "responseDataUnitLength in public server's response expected to 6, actually is "
-//                << responseDataUnitLen;
-//        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
-//        cout << m_stream.str() << endl;
-//        return;
-//    }
+    //    if (responseDataUnitLen != sizeof (TimeForward_t)) {
+    //        m_stream << "[" << m_vin << "] "
+    //                << "responseDataUnitLength in public server's response expected to 6, actually is "
+    //                << responseDataUnitLen;
+    //        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseFormatErr;
+    //        cout << m_stream.str() << endl;
+    //        return;
+    //    }
     m_packetHdr = packetHdrTmp;
     responseTime = (TimeForward_t*) (m_responseBuf.array() + sizeof (DataPacketHeader_t));
 
     //    m_stream.str("");
-//        cout << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
-//                << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec << endl;
+    //        cout << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
+    //                << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec << endl;
     //    Util::output(m_vin, m_stream.str());
     //    m_stream.str("");
     //    m_stream << "response encryptionAlgorithm: " << (int) packetHdrTmp->encryptionAlgorithm;
     //    Util::output(m_vin, m_stream.str());
 
-    if (packetHdrTmp->responseFlag == responseflag::enumResponseFlag::success)
-        if (packetHdrTmp->cmdId == enumCmdCode::vehicleLogin)
-            m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::carLoginOk;
-        else
-            m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseOk;
-    else
-        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::responseNotOk;
+    if (packetHdrTmp->responseFlag == responseflag::enumResponseFlag::success) {
+        cout << "[" << m_vin << "] response ok" << endl;
+        status(responsereaderstatus::EnumResponseReaderStatus::responseOk);
+    } else
+        status(responsereaderstatus::EnumResponseReaderStatus::responseNotOk);
     m_responseBuf.rewind();
 }
 
+const responsereaderstatus::EnumResponseReaderStatus& ResponseReader::waitNextStatus() {
+    boost::unique_lock<boost::mutex> lk(statusMtx);
+    newStatus.wait(lk);
+    return m_responseStatus;
+}
+
+void ResponseReader::status(const responsereaderstatus::EnumResponseReaderStatus& status) {
+    boost::unique_lock<boost::mutex> lk(statusMtx);
+    m_responseStatus = status;
+    newStatus.notify_all();
+}

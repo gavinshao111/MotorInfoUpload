@@ -87,11 +87,11 @@ void Uploader::task() {
             case EnumRunMode::platformCompliance:
                 setupConnection();
                 for (int i = 0; i < 5; i++) {
-                    setupConnAndLogin(true);
+                    setupConnAndLogin();
                     logout();
                 }
                 r_logger.info(m_id, "login logout 5 times done ");
-                setupConnAndLogin(true);
+                setupConnAndLogin();
                 break;
             case EnumRunMode::release:
                 //setupConnAndLogin();
@@ -173,8 +173,8 @@ void Uploader::forwardCarData() {
     m_uploaderStatus = uploaderstatus::EnumUploaderStatus::init;
     tcpSendData(m_packetHdr->cmdId);
     if (m_uploaderStatus == uploaderstatus::EnumUploaderStatus::connectionClosed) {
-//        if (m_packetHdr->cmdId == enumCmdCode::realtimeUpload)
-//            m_packetHdr->cmdId = enumCmdCode::reissueUpload;
+        //        if (m_packetHdr->cmdId == enumCmdCode::realtimeUpload)
+        //            m_packetHdr->cmdId = enumCmdCode::reissueUpload;
         r_carDataQueue.put(m_carData, true);
     }
 }
@@ -182,9 +182,8 @@ void Uploader::forwardCarData() {
 /**
  * 未响应则内部一直重复登入，登入回应失败直接抛异常。返回说明登入成功。
  * 
- * @param needResponse
  */
-void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
+void Uploader::setupConnAndLogin() {
     time_t now;
     struct tm* timeTM;
 
@@ -217,51 +216,39 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
         updateLoginData();
 
         tcpSendData(enumCmdCode::platformLogin);
-        if (!needResponse)
-            break;
         r_logger.info(m_id, "waiting for public server's response...");
-        //        readResponse(r_resource->GetReadResponseTimeOut());
-
-        bool rereadResponse;
-        do {
-            rereadResponse = false;
-            switch (m_responseReader.status()) {
-                case responsereaderstatus::EnumResponseReaderStatus::init:
-                    rereadResponse = true; // 可能ResponseReader正在sleep
-                    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-                    break;
-                case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
-                    isConnectWithPublicServer = false;
-                    break;
-                case responsereaderstatus::EnumResponseReaderStatus::timeout:
-                {
-                    size_t timeToSleep = r_resource->getLoginTimes() >= i ?
-                            r_resource->getLoginIntervals() : r_resource->getLoginIntervals2();
-                    m_stream.str("");
-                    m_stream << "read response " << r_resource->getReadResponseTimeOut()
-                            << "s timeout when login, sleep " << timeToSleep << "s and resend";
-                    r_logger.info(m_id, m_stream.str());
-                    r_logger.warn(m_id, m_stream.str());
-                    boost::this_thread::sleep(boost::posix_time::seconds(timeToSleep));
-                    break;
-                }
-                case responsereaderstatus::EnumResponseReaderStatus::responseOk:
-                    resend = false;
-                    break;
-                case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
-                    m_stream.str("");
-                    m_stream << "Uploader::setupConnAndLogin(): response not ok, response flag: " << (int) m_responseReader.responseFlag();
-                    throw runtime_error(m_stream.str());
-                case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
-                    //                throw runtime_error("Uploader::setupConnAndLogin(): bad response format");
-                    r_logger.warn("Uploader::setupConnAndLogin", "bad response format");
-                    break;
-                default:
-                    m_stream.str("");
-                    m_stream << "Uploader::setupConnAndLogin(): unrecognize ResponseReaderStatus code: " << m_responseReader.status();
-                    throw runtime_error(m_stream.str());
+        switch (m_responseReader.waitNextStatus()) {
+            case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
+                isConnectWithPublicServer = false;
+                break;
+            case responsereaderstatus::EnumResponseReaderStatus::timeout:
+            {
+                size_t timeToSleep = r_resource->getLoginTimes() >= i ?
+                        r_resource->getLoginIntervals() : r_resource->getLoginIntervals2();
+                m_stream.str("");
+                m_stream << "read response " << r_resource->getReadResponseTimeOut()
+                        << "s timeout when login, sleep " << timeToSleep << "s and resend";
+                r_logger.info(m_id, m_stream.str());
+                r_logger.warn(m_id, m_stream.str());
+                boost::this_thread::sleep(boost::posix_time::seconds(timeToSleep));
+                break;
             }
-        } while (rereadResponse);
+            case responsereaderstatus::EnumResponseReaderStatus::responseOk:
+                resend = false;
+                break;
+            case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
+                m_stream.str("");
+                m_stream << "Uploader::setupConnAndLogin(): response not ok, response flag: " << (int) m_responseReader.responseFlag();
+                throw runtime_error(m_stream.str());
+            case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
+                //                throw runtime_error("Uploader::setupConnAndLogin(): bad response format");
+                r_logger.warn("Uploader::setupConnAndLogin", "bad response format");
+                break;
+            default:
+                m_stream.str("");
+                m_stream << "Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " << m_responseReader.status();
+                throw runtime_error(m_stream.str());
+        }
     } while (resend);
 
     m_serialNumber++;
@@ -272,6 +259,14 @@ void Uploader::setupConnAndLogin(const bool& needResponse/* = true*/) {
 void Uploader::logout() {
     updateLogoutData();
     tcpSendData(enumCmdCode::platformLogout);
+    r_logger.info(m_id, "waiting for public server's response...");
+    
+    if (m_responseReader.waitNextStatus() != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
+        m_stream.str("");
+        m_stream << "response not ok when logout, response status: " << m_responseReader.status();
+        throw runtime_error(m_stream.str());
+    }
+
     r_logger.info(m_id, "platform logout done");
 }
 

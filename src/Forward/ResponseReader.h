@@ -19,6 +19,8 @@
 #include "ByteBuffer.h"
 #include "Logger.h"
 #include "DataFormatForward.h"
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 namespace responsereaderstatus {
 
@@ -29,7 +31,6 @@ namespace responsereaderstatus {
         responseNotOk = 3,
         connectionClosed = 4,
         responseFormatErr = 5,
-        carLoginOk = 6,
     } EnumResponseReaderStatus;
 }
 class ResponseReader {
@@ -42,8 +43,15 @@ public:
     const responsereaderstatus::EnumResponseReaderStatus& status() const {
         return m_responseStatus;
     }
+
+    const responsereaderstatus::EnumResponseReaderStatus& waitNextStatus();
+
     uint8_t responseFlag() const {
         return m_packetHdr->responseFlag;
+    }
+    
+    const enumCmdCode& responsePacketType() const {
+        return m_responsePacketType;
     }
     
 private:
@@ -54,11 +62,16 @@ private:
     DataPacketHeader_t* m_packetHdr;
     Logger& r_logger;
     responsereaderstatus::EnumResponseReaderStatus m_responseStatus;
+    enumCmdCode m_responsePacketType;
     std::string m_detail;
     std::string m_id;
+    boost::mutex statusMtx;
+    boost::condition_variable newStatus;
     
     void readResponse(const size_t& timeout);
     
+    void status(const responsereaderstatus::EnumResponseReaderStatus& status);
+
 };
 
 #endif /* RESPONSEREADER_H */
