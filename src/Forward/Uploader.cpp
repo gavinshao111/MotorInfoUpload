@@ -260,7 +260,6 @@ void Uploader::logout() {
     updateLogoutData();
     tcpSendData(enumCmdCode::platformLogout);
     r_logger.info(m_id, "waiting for public server's response...");
-    
     if (m_responseReader.waitNextStatus() != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
         m_stream.str("");
         m_stream << "response not ok when logout, response status: " << m_responseReader.status();
