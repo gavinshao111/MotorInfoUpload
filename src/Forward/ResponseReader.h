@@ -17,7 +17,6 @@
 #include <sstream>
 #include "PublicServer.h"
 #include "ByteBuffer.h"
-#include "Logger.h"
 #include "DataFormatForward.h"
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -60,7 +59,6 @@ private:
     std::stringstream m_stream;
     std::string m_vin;
     DataPacketHeader_t* m_packetHdr;
-    Logger& r_logger;
     responsereaderstatus::EnumResponseReaderStatus m_responseStatus;
     enumCmdCode m_responsePacketType;
     std::string m_detail;

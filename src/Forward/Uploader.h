@@ -14,13 +14,11 @@
 #ifndef UPLOADER_H
 #define UPLOADER_H
 
-#include <sstream>
 #include "resource.h"
 #include "DataFormatForward.h"
 #include "../BlockQueue.h"
 #include "PublicServer.h"
 #include "ByteBuffer.h"
-#include "Logger.h"
 #include "ResponseReader.h"
 
 namespace uploaderstatus {
@@ -69,11 +67,9 @@ private:
     time_t m_lastloginTime;
     time_t m_lastSendTime;
     uploaderstatus::EnumUploaderStatus m_uploaderStatus;
-    std::stringstream m_stream;
 
     std::string m_vin;
     DataPacketHeader_t* m_packetHdr;
-    Logger& r_logger;
     ResponseReader m_responseReader;
     EnumRunMode m_mode;
     std::string m_id;

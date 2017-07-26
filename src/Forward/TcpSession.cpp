@@ -22,13 +22,13 @@
 #include <sstream>
 #include <bits/stl_map.h>
 #include <bits/basic_string.h>
-#include <boost/lexical_cast.hpp>
 #include <vector>
 
 #include "../Util.h"
 #include "resource.h"
 #include "Constant.h"
 #include "Uploader.h"
+#include "logger.h"
 
 using namespace boost::asio;
 
@@ -37,14 +37,12 @@ m_heartBeatCycle(resource::getResource()->getHeartBeatCycle()),
 m_socket(ioservice),
 m_timer(ioservice),
 m_quit(false),
-m_logger(resource::getResource()->getLogger()),
 m_vin(Constant::vinInital) {
 }
 
 TcpSession::~TcpSession() {
     // deadline_timer的析构函数什么也不做，因此不会导致发出的async_wait被cancel。
     m_timer.cancel();
-    //    std::cout << m_vinStr << ": TcpSession destructed" << ' ' << Util::nowTimeStr() << std::endl;
 }
 
 ip::tcp::socket& TcpSession::socket() {
@@ -73,16 +71,15 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
         if (error) {
             if (m_vin.compare(Constant::vinInital) != 0) {
                 boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
-                int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
-                //            std::cout << "TcpSession::readHeaderHandler erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
+                resource::getResource()->getVechicleSessionTable().erase(m_vin);
             }
 
             if (error == error::operation_aborted) {
             } else if (error == error::eof) {
-                m_logger.info("TcpSession::readHeaderHandler", "session closed by peer");
+                GINFO("TcpSession") << "session closed by peer when readHeaderHandler";
             } else {
-                m_logger.error("TcpSession::readHeaderHandler error");
-                m_logger.errorStream << "message: " << error.message() << ", code: " << error.value() << std::endl;
+                GWARNING("TcpSession") << "readHeaderHandler error, message: "
+                        << error.message() << ", code: " << error.value();
             }
             return;
         }
@@ -93,7 +90,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
         if (m_vin.compare(Constant::vinInital) == 0) {
             m_vin.assign((char*) m_hdr->vin, sizeof (m_hdr->vin));
         }
-        
+
         // 若在符合性检测下，只上传指定车机的数据
         if (resource::getResource()->getMode() != EnumRunMode::release) {
             const std::vector<std::string>& vins = resource::getResource()->getVinAllowedArray();
@@ -107,8 +104,7 @@ void TcpSession::readHeaderHandler(const boost::system::error_code& error, size_
 
         readDataUnit();
     } catch (std::runtime_error& e) {
-        m_logger.error(m_vin, "readHeaderHandler exception");
-        m_logger.errorStream << e.what() << std::endl;
+        GWARNING(m_vin) << "readHeaderHandler exception: " << e.what();
     }
 }
 
@@ -132,16 +128,15 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         if (error) {
             if (m_vin.compare(Constant::vinInital) != 0) {
                 boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
-                int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
-                //            std::cout << "TcpSession::readDataUnitHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
+                resource::getResource()->getVechicleSessionTable().erase(m_vin);
             }
 
             if (error == error::operation_aborted) {
             } else if (error == error::eof) {
-                m_logger.info(m_vin, "session closed by peer");
+                GINFO(m_vin) << "session closed by peer";
             } else {
-                m_logger.error(m_vin, "TcpSession::readDataUnitHandler error");
-                m_logger.errorStream << "message: " << error.message() << ", code: " << error.value() << std::endl;
+                GWARNING(m_vin) << "TcpSession::readDataUnitHandler error, message: "
+                        << error.message() << ", code: " << error.value();
             }
             return;
         }
@@ -151,8 +146,7 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         if (!m_quit)
             readHeader();
     } catch (std::runtime_error& e) {
-        m_logger.error(m_vin, "readDataUnitHandler exception");
-        m_logger.errorStream << e.what() << std::endl;
+        GWARNING(m_vin) << "readDataUnitHandler exception: " << e.what();
     }
 }
 
@@ -177,24 +171,20 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
     // 此时对方关闭socket，m_socket.is_open()仍为true error == error::broken_pipe 
     // 经实测，以上有误。对方关闭socket，这边不会有任何影响
     if (error) {
-        m_logger.error("TcpSession::writeHandler");
-        m_logger.errorStream << "message: " << error.message() << ", error code: " << error.value() << std::endl;
+        GWARNING(m_vin) << "TcpSession::writeHandler error, message: "
+                << error.message() << ", code: " << error.value();
         boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
         if (m_vin.compare(Constant::vinInital) != 0) {
-            int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
-            //            std::cout << "TcpSession::writeHandler erase " << m_vinStr << ": " << n << ' ' << Util::nowTimeStr() << std::endl;
+            resource::getResource()->getVechicleSessionTable().erase(m_vin);
         }
         return;
     }
-    //    m_stream.str("");
-    //    m_stream << bytes_transferred << " bytes sent to vehicle";
-    //    m_logger.info(m_vinStr, m_stream.str());
 }
 
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
-        m_logger.warn(m_vin, "read vehicle session timeout");
+        GWARNING(m_vin) << "read vehicle session timeout";
         m_socket.close();
     }
 }
@@ -279,35 +269,35 @@ void TcpSession::parseDataUnit() {
             throw std::runtime_error(m_stream.str());
         }
         if (m_packetRef->remaining() != 1)
-            throw std::runtime_error("invalid packet format: m_packetRef->remaining expect to be 1 after parse data unit");
-        
+            throw std::runtime_error(
+                "invalid packet format: m_packetRef->remaining expect to be 1 after parse data unit");
+
         if (cmdId == enumCmdCode::realtimeUpload && !Uploader::isConnectWithPublicServer)
             ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
 
         uint16_t newDataUnitLength = rtData->position() - sizeof (DataPacketHeader_t);
-        ((DataPacketHeader_t*) rtData->array())->dataUnitLength = htons(newDataUnitLength);
+        ((DataPacketHeader_t*) rtData->array())->dataUnitLength =
+                boost::asio::detail::socket_ops::host_to_network_short(newDataUnitLength);
         rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position() - 2));
         rtData->flip();
         resource::getResource()->getVehicleDataQueue().put(rtData);
-        std::string type = cmdId == enumCmdCode::reissueUpload ? 
-            Constant::cmdReissueUploadStr : Constant::cmdRealtimeUploadStr;
-        m_logger.info(m_vin, type + " data put into queue, now queue size: "
-                + boost::lexical_cast<std::string>(resource::getResource()->getVehicleDataQueue().remaining()));
+        std::string type = cmdId == enumCmdCode::reissueUpload ?
+                Constant::cmdReissueUploadStr : Constant::cmdRealtimeUploadStr;
+        GINFO(m_vin) << type << " data put into queue, now queue size: "
+                << resource::getResource()->getVehicleDataQueue().remaining();
     } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
         m_packetRef->position(0);
         resource::getResource()->getVehicleDataQueue().put(m_packetRef);
-        std::string type = cmdId == enumCmdCode::vehicleLogin ? 
-            Constant::cmdVehicleLoginStr : Constant::cmdVehicleLogoutStr;
-        m_logger.info(m_vin, type + " data put into queue, now queue size: "
-                + boost::lexical_cast<std::string>(resource::getResource()->getVehicleDataQueue().remaining()));
+        std::string type = cmdId == enumCmdCode::vehicleLogin ?
+                Constant::cmdVehicleLoginStr : Constant::cmdVehicleLogoutStr;
+        GINFO(m_vin) << type << " data put into queue, now queue size: "
+                << resource::getResource()->getVehicleDataQueue().remaining();
         boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
         if (cmdId == enumCmdCode::vehicleLogin) {
-            std::pair < std::map<std::string, SessionRef_t>::iterator, bool> ret;
-            ret = resource::getResource()->getVechicleSessionTable().insert(std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
-            //            std::cout << "TcpSession::parseDataUnit login insert " << m_vinStr << ": " << ret.second << ' '<< Util::nowTimeStr() << std::endl;
+            resource::getResource()->getVechicleSessionTable().insert(
+                    std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
         } else {
-            int n = resource::getResource()->getVechicleSessionTable().erase(m_vin);
-            //            std::cout << "TcpSession::parseDataUnit logout erase " << m_vinStr << ": " << n << ' '<< Util::nowTimeStr() << std::endl;
+            resource::getResource()->getVechicleSessionTable().erase(m_vin);
             m_quit = true;
         }
     } else if (cmdId == enumCmdCode::heartBeat) {
@@ -315,7 +305,6 @@ void TcpSession::parseDataUnit() {
         if (m_packetRef->remaining() == 1 && m_dataUnitLen == 0) {
             m_hdr->responseFlag = responseflag::enumResponseFlag::success;
             // regenerate bcc
-
             uint8_t bcc = Util::generateBlockCheckCharacter((uint8_t*) m_hdr + 2, sizeof (DataPacketHeader_t) - 2);
             m_packetRef->put(bcc);
             m_packetRef->flip();

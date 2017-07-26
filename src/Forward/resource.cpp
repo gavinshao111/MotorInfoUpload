@@ -20,9 +20,14 @@
 #include <stdexcept>
 #include <fstream>
 #include <iomanip>
+#if __cplusplus < 201103L
 #include <boost/lexical_cast.hpp>
+#define to_str(value) boost::lexical_cast<string>(value)
+#else
+#define to_str(value) to_string((int)value)
+#endif
 #include <boost/filesystem.hpp>
-#include "../Util.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -48,7 +53,7 @@ resource::resource() {
     int MaxVehicleDataQueueSize = pt.get<int>(section + ".MaxVehicleDataQueueSize", 1);
     vehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue < BytebufSPtr_t >> (MaxVehicleDataQueueSize);
     string vinAllowed = pt.get<string>(section + ".VinAllowed", "");
-    vinAllowedArray = Util::str_split(vinAllowed, ',');
+    vinAllowedArray = gutility::str_split(vinAllowed, ',');
     section.assign("DataPacket");
     encryptionAlgorithm = (enumEncryptionAlgorithm) pt.get<int>(section + ".EncryptionAlgorithm", 1);
     paltformId = pt.get<string>(section + ".PaltformId", "");
@@ -72,7 +77,7 @@ resource::resource() {
         boost::filesystem::create_directories(path);
     if (messageOutputFilePath.at(messageOutputFilePath.length() - 1) != '/')
         messageOutputFilePath.append("/");
-    messageOutputFilePath.append(Util::timeToStr(Constant::timeFormatForFile));
+    messageOutputFilePath.append(gutility::timeToStr(Constant::timeFormatForFile));
     messageOutputFilePath.append(".txt");
 
     messageOs.open(messageOutputFilePath.c_str(), ofstream::out | ofstream::trunc | ofstream::binary);
@@ -96,7 +101,7 @@ resource::resource() {
             systemStr = "hexadecimal";
             break;
         default:
-            throw runtime_error("unrecognize system enumeration: " + boost::lexical_cast<string>(system));
+            throw runtime_error("unrecognized system enumeration: " + to_str(system));
     }
     messageOs << systemStr << " data\n" << endl;
 }

@@ -24,7 +24,6 @@
 //#include "GSocket.h"
 #include "DataFormatForward.h"
 #include "TcpSession.h"
-#include "Logger.h"
 #include "PublicServer.h"
 
 class resource {
@@ -107,10 +106,6 @@ public:
         return ioService;
     }
 
-    Logger& getLogger() {
-        return logger;
-    }
-
     const size_t& getUploadChannelNumber() const {
         return uploadChannelNumber;
     }
@@ -191,7 +186,6 @@ private:
     boost::mutex mtxForTable;
     
     boost::asio::io_service ioService;
-    Logger logger;
     std::ofstream messageOs;
     boost::mutex msgMtx;
     enumSystem system;

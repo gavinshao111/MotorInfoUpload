@@ -14,9 +14,9 @@
 #include"DataFormatForward.h"
 #include "TcpServer.h"
 #include "resource.h"
-#include "../Util.h"
 #include "Uploader.h"
 #include "Constant.h"
+#include "logger.h"
 
 /*
  * 功能
@@ -37,6 +37,7 @@ bool offline = false;
 std::vector<boost::shared_ptr < boost::thread>> uploadThreads;
 
 int main(int argc, char** argv) {
+    gavinlog::init("log");
     try {
 
         resource::getResource();
@@ -62,8 +63,8 @@ int main(int argc, char** argv) {
             std::signal(SIGUSR2, signal_handler);
         }
 
-        std::cout << "[INIT] Service started" << std::endl;
-        resource::getResource()->getLogger().info("INIT", "Service started");
+        GDEBUG("INIT") << "Service started";
+        GINFO("INIT") << "Service started";
         boost::mutex mtx;
         boost::unique_lock<boost::mutex> lk(mtx);
         quit.wait(lk);
@@ -81,11 +82,10 @@ int main(int argc, char** argv) {
         }
 #endif
     } catch (std::exception &e) {
-        resource::getResource()->getLogger().error("main exception");
-        resource::getResource()->getLogger().errorStream << e.what() << std::endl;
+        GWARNING("main") << "exception: " << e.what();
     }
-    resource::getResource()->getLogger().info("DONE", "Service shutdown");
-    std::cout << "[DONE] Service shutdown" << std::endl;
+    GDEBUG("DONE") << "Service shutdown";
+    GINFO("DONE") << "Service shutdown";
 
     return 0;
 }
@@ -112,8 +112,7 @@ void uploadTask(const size_t& no) {
         Uploader uploader(no, (const EnumRunMode&) resource::getResource()->getMode());
         uploader.task();
     } catch (std::exception &e) {
-        resource::getResource()->getLogger().error("uploadTask exception");
-        resource::getResource()->getLogger().errorStream << e.what() << std::endl;
+        GWARNING("uploadTask") << "exception: " << e.what();
     }
 }
 
@@ -158,7 +157,6 @@ void tcpServiceTask() {
         TcpServer tcpServer(ioService, resource::getResource()->getEnterprisePlatformTcpServicePort());
         ioService.run();
     } catch (std::exception &e) {
-        resource::getResource()->getLogger().error("tcpServiceTask exception");
-        resource::getResource()->getLogger().errorStream << e.what() << std::endl;
+        GWARNING("tcpServiceTask") << "exception: " << e.what();
     }
 }

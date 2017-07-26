@@ -21,7 +21,14 @@
 #include "Constant.h"
 #include "ResponseReader.h"
 #include <iostream>
+#if __cplusplus < 201103L
 #include <boost/lexical_cast.hpp>
+#define to_str(value) boost::lexical_cast<string>(value)
+#else
+#define to_str(value) to_string((int)value)
+#endif
+#include "logger.h"
+#include "utility.h"
 
 using namespace bytebuf;
 using namespace std;
@@ -41,14 +48,12 @@ r_resource(resource::getResource()),
 r_carDataQueue(r_resource->getVehicleDataQueue()),
 m_publicServer(r_resource->getPublicServerIp(), r_resource->getPublicServerPort()),
 m_vin(Constant::vinInital),
-m_responseReader(no, m_publicServer),
-r_logger(r_resource->getLogger()) {
+m_responseReader(no, m_publicServer) {
     const string& usernameInIni = r_resource->getPublicServerUserName();
     if (usernameInIni.length() > sizeof (m_loginData.username)
             || (r_resource->getPublicServerPassword().length() > sizeof (m_loginData.password)))
         throw runtime_error("Uploader(): PublicServerUserName or PublicServerPassword Illegal");
-    m_stream << "Uploader." << no;
-    m_id = m_stream.str();
+    m_id = "Uploader." + to_str(no);
     usernameInIni.copy((char*) m_loginData.username, sizeof (m_loginData.username));
     // 平台符合性检测：多链路的平台唯一码、密码与原链路相同，仅用户名为原用户名+“1”
     // 老赵：第no条辅链路，就加no个字符“1”
@@ -90,22 +95,23 @@ void Uploader::task() {
                     setupConnAndLogin();
                     logout();
                 }
-                r_logger.info(m_id, "login logout 5 times done ");
+                GINFO(m_id) << "login & logout 5 times done ";
+                GDEBUG(m_id) << "login & logout 5 times done ";
                 setupConnAndLogin();
                 break;
             case EnumRunMode::release:
                 //setupConnAndLogin();
                 break;
             default:
-                m_stream << "unrecognize run mode: " << (int) m_mode;
-                throw runtime_error(m_stream.str());
+                throw runtime_error("unrecognized run mode: " + to_str(m_mode));
         }
         for (;;) {
             // 平台符合性检测需要离线10min
             if (m_mode == EnumRunMode::platformCompliance && offline) {
                 m_publicServer.close();
                 isConnectWithPublicServer = false;
-                r_logger.info(m_id, "close session with public server, offline for 10 min...");
+                GINFO(m_id) << "close session with public server, offline for 10 min...";
+                GDEBUG(m_id) << "close session with public server, offline for 10 min...";
                 boost::this_thread::sleep(boost::posix_time::minutes(10));
                 offline = false;
             }
@@ -115,30 +121,27 @@ void Uploader::task() {
             try {
                 m_carData = r_carDataQueue.take();
             } catch (boost::thread_interrupted&) {
-                //                cout << m_id << " catch thread_interrupted" << endl;
                 break;
             }
             if (!m_carData->hasRemaining()) {
-                r_logger.warn("Uploader::run()", "take an empty realtimeData");
+                GWARNING("Uploader::run()") << "take an empty realtimeData";
                 continue;
             }
             m_packetHdr = (DataPacketHeader_t*) m_carData->array();
             m_vin.assign((char*) m_packetHdr->vin, sizeof (m_packetHdr->vin));
-            //            m_logger.info(m_vin, "Uploader get vehicle data from data queue");
 
             forwardCarData();
         }
         logout();
     } catch (exception &e) {
-        r_logger.error(m_id, "exception");
-        r_logger.errorStream << e.what() << std::endl;
+        GWARNING(m_id) << "exception: " << e.what();
     } catch (boost::thread_interrupted&) {
     }
     m_publicServer.close();
     isConnectWithPublicServer = false;
     responseReaderThread.interrupt();
     responseReaderThread.join();
-    r_logger.info(m_id, "quiting...");
+    GINFO(m_id) << "quiting...";
 }
 
 void Uploader::setupConnection() {
@@ -148,11 +151,10 @@ void Uploader::setupConnection() {
     m_publicServer.close();
     m_publicServer.connect();
     for (; !m_publicServer.isConnected(); boost::this_thread::sleep(boost::posix_time::seconds(r_resource->getReSetupPeroid()))) {
-        r_logger.warn(m_id, "connect refused by Public Server. Reconnecting...");
-        r_logger.warnStream << "data queue size: " << r_carDataQueue.remaining() << endl;
+        GWARNING(m_id) << "connect refused by Public Server. Reconnecting...\ndata queue size: " << r_carDataQueue.remaining();
         m_publicServer.connect();
     }
-    r_logger.info(m_id, "connection with public platform established");
+    GINFO(m_id) << "connection with public platform established";
     isConnectWithPublicServer = true;
 }
 
@@ -216,7 +218,7 @@ void Uploader::setupConnAndLogin() {
         updateLoginData();
 
         tcpSendData(enumCmdCode::platformLogin);
-        r_logger.info(m_id, "waiting for public server's response...");
+        GINFO(m_id) << "waiting for public server's response...";
         switch (m_responseReader.waitNextStatus()) {
             case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
                 isConnectWithPublicServer = false;
@@ -225,11 +227,11 @@ void Uploader::setupConnAndLogin() {
             {
                 size_t timeToSleep = r_resource->getLoginTimes() >= i ?
                         r_resource->getLoginIntervals() : r_resource->getLoginIntervals2();
-                m_stream.str("");
-                m_stream << "read response " << r_resource->getReadResponseTimeOut()
+                GINFO(m_id) << "read response " << r_resource->getReadResponseTimeOut()
                         << "s timeout when login, sleep " << timeToSleep << "s and resend";
-                r_logger.info(m_id, m_stream.str());
-                r_logger.warn(m_id, m_stream.str());
+                GWARNING(m_id) << "read response " << r_resource->getReadResponseTimeOut()
+                        << "s timeout when login, sleep " << timeToSleep << "s and resend";
+                
                 boost::this_thread::sleep(boost::posix_time::seconds(timeToSleep));
                 break;
             }
@@ -237,36 +239,30 @@ void Uploader::setupConnAndLogin() {
                 resend = false;
                 break;
             case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
-                m_stream.str("");
-                m_stream << "Uploader::setupConnAndLogin(): response not ok, response flag: " << (int) m_responseReader.responseFlag();
-                throw runtime_error(m_stream.str());
+                throw runtime_error("Uploader::setupConnAndLogin(): response not ok, response flag: " + to_str((int) m_responseReader.responseFlag()));
             case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
                 //                throw runtime_error("Uploader::setupConnAndLogin(): bad response format");
-                r_logger.warn("Uploader::setupConnAndLogin", "bad response format");
+                GWARNING(m_id) << "bad response format when setupConnAndLogin";
                 break;
             default:
-                m_stream.str("");
-                m_stream << "Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " << m_responseReader.status();
-                throw runtime_error(m_stream.str());
+                throw runtime_error("Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " + to_str(m_responseReader.status()));
         }
     } while (resend);
 
     m_serialNumber++;
     m_lastloginTime = time(NULL);
-    r_logger.info(m_id, "platform login done");
+    GINFO(m_id) << "platform login done";
 }
 
 void Uploader::logout() {
     updateLogoutData();
     tcpSendData(enumCmdCode::platformLogout);
-    r_logger.info(m_id, "waiting for public server's response...");
+    GINFO(m_id) << "waiting for public server's response...";
     if (m_responseReader.waitNextStatus() != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
-        m_stream.str("");
-        m_stream << "response not ok when logout, response status: " << m_responseReader.status();
-        throw runtime_error(m_stream.str());
+        throw runtime_error("response not ok when logout, response status: " + to_str(m_responseReader.status()));
     }
 
-    r_logger.info(m_id, "platform logout done");
+    GINFO(m_id) << "platform logout done";
 }
 
 void Uploader::updateLoginData() {
@@ -344,9 +340,7 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
                 dataToSend = m_carData;
                 break;
             default:
-                m_stream.str("[");
-                m_stream << m_vin << "] Uploader::tcpSendData(): Illegal cmd: " << cmd;
-                throw runtime_error(m_stream.str());
+                throw runtime_error("[" + m_vin + "] Uploader::tcpSendData(): Illegal cmd: " + to_str(cmd));
         }
 
         TimeForward_t* ptime = (TimeForward_t*) (dataToSend->array() + sizeof (DataPacketHeader));
@@ -365,16 +359,13 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
         dataToSend->movePosition(sizeToSend, true);
         m_lastSendTime = time(NULL);
 
-        m_stream.str("");
-        m_stream << sizeToSend << " bytes of " << cmdTypeStr << " data uploaded";
-        r_logger.info(m_vin, m_stream.str());
+        GINFO(m_vin) << sizeToSend << " bytes of " << cmdTypeStr << " data uploaded";
 
         if (r_resource->getUploadChannelNumber() > 1)
             boost::unique_lock<boost::mutex> lk(r_resource->getMsgMtx());
         outputMsg(r_resource->getMessageOs(), r_resource->getSystem(), m_vin, collectTime, m_lastSendTime, dataToSend.get());
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
-        r_logger.warn("Uploader::tcpSendData exception");
-        r_logger.warnStream << e.what() << std::endl;
+        GWARNING("Uploader::tcpSendData") << "exception: " << e.what();
         m_uploaderStatus = uploaderstatus::EnumUploaderStatus::connectionClosed;
     }
 }
@@ -383,8 +374,8 @@ void Uploader::outputMsg(ostream& out, const enumSystem& system, const string& v
         const time_t& collectTime, const time_t& sendTime, const ByteBuffer* data/* = NULL*/) {
     out << setiosflags(ios::left)
             << setw(21) << setfill(' ') << vin
-            << setw(23) << setfill(' ') << Util::timeToStr(collectTime)
-            << setw(23) << setfill(' ') << Util::timeToStr(sendTime);
+            << setw(23) << setfill(' ') << gutility::timeToStr(collectTime)
+            << setw(23) << setfill(' ') << gutility::timeToStr(sendTime);
     if (data != NULL) {
         switch (system) {
             case enumSystem::oct:
@@ -398,7 +389,7 @@ void Uploader::outputMsg(ostream& out, const enumSystem& system, const string& v
                 data->outputAsHex(out);
                 break;
             default:
-                throw runtime_error("unrecognize system enumeration: " + boost::lexical_cast<string>(system));
+                throw runtime_error("unrecognized system enumeration: " + to_str(system));
         }
     }
     out << endl;

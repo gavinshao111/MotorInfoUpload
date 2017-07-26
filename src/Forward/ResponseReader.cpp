@@ -19,6 +19,13 @@
 #include "resource.h"
 #include "Constant.h"
 #include "../Util.h"
+#include "logger.h"
+#if __cplusplus < 201103L
+#include <boost/lexical_cast.hpp>
+#define to_str(value) boost::lexical_cast<string>(value)
+#else
+#define to_str(value) to_string((int)value)
+#endif
 
 using namespace bytebuf;
 using namespace std;
@@ -28,10 +35,8 @@ ResponseReader::ResponseReader(const size_t& no, PublicServer& publicServer) :
 m_responseBuf(512),
 r_publicServer(publicServer),
 m_vin(Constant::vinInital),
-m_responseStatus(responsereaderstatus::EnumResponseReaderStatus::init),
-r_logger(resource::getResource()->getLogger()) {
-    m_stream << "ResponseReader." << no;
-    m_id = m_stream.str();
+m_responseStatus(responsereaderstatus::EnumResponseReaderStatus::init) {
+    m_id = "ResponseReader." + to_str(no);
 }
 
 //ResponseReader::ResponseReader(const ResponseReader& orig) {
@@ -50,7 +55,6 @@ void ResponseReader::task() {
                 try {
                     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
                 } catch (boost::thread_interrupted&) {
-                    //                    cout << m_id << " catch thread_interrupted" << endl;
                     break;
                 }
                 continue;
@@ -58,41 +62,38 @@ void ResponseReader::task() {
             readResponse(timeout);
             switch (m_responseStatus) {
                 case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
-                    r_logger.warn(m_id, "connectionClosed");
+                    GWARNING(m_id) << "connectionClosed";
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::timeout:
-                    r_logger.warn(m_id, "read timeout");
+                    GWARNING(m_id) << "read timeout";
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseOk:
                     if (m_responsePacketType == enumCmdCode::vehicleLogin) {
-                        resource::SessionTable_t::iterator iter = resource::getResource()->getVechicleSessionTable().find(m_vin);
+                        resource::SessionTable_t::iterator iter =
+                                resource::getResource()->getVechicleSessionTable().find(m_vin);
                         if (iter == resource::getResource()->getVechicleSessionTable().end())
-                            r_logger.warn(m_vin, "vin not existing in VechicleConnTable when ResponseReader try to forward response");
+                            GWARNING(m_vin) << "vin not existing in vechicle session table when try to forward response";
                         else
                             iter->second->write(m_responseBuf);
                     }
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
                 {
-                    r_logger.info(m_vin);
-                    r_logger.infoStream << "Sender forward car data response not ok, response flag: "
-                            << (int) m_packetHdr->responseFlag << std::endl;
+                    GINFO(m_vin) << "response not ok, response flag: "
+                            << (int) m_packetHdr->responseFlag;
                 }
                 case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
-                    r_logger.warn(m_vin, "bad response format: ");
-                    r_logger.warnStream << m_stream.str() << std::endl;
+                    GWARNING(m_vin) << "bad response format: " << m_stream.str();
                     break;
                 default:
-                    m_stream.str("");
-                    m_stream << "ResponseReader::forwardCarData(): unrecognize SenderStatus code: " << m_responseStatus;
-                    throw runtime_error(m_stream.str());
+                    throw runtime_error("ResponseReader::forwardCarData(): unrecognize SenderStatus code: "
+                            + to_str(m_responseStatus));
             }
         }
     } catch (exception &e) {
-        r_logger.error("ResponseReader exception");
-        r_logger.errorStream << e.what() << std::endl;
+        GWARNING("ResponseReader exception") << e.what();
     }
-    r_logger.info(m_id, "quiting...");
+    GINFO(m_id) << "quiting...";
 }
 
 /*
@@ -119,7 +120,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
         }
 
         r_publicServer.read(m_responseBuf, sizeof (DataPacketHeader_t) - 2, timeout);
-        m_responsePacketType = (enumCmdCode)packetHdrTmp->cmdId;
+        m_responsePacketType = (enumCmdCode) packetHdrTmp->cmdId;
         m_vin.assign((char*) packetHdrTmp->vin, sizeof (packetHdrTmp->vin));
         responseDataUnitLen = boost::asio::detail::socket_ops::network_to_host_short(
                 packetHdrTmp->dataUnitLength);
@@ -134,8 +135,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
         status(responsereaderstatus::EnumResponseReaderStatus::timeout);
         return;
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
-        r_logger.warn("ResponseReader::readResponse");
-        r_logger.warnStream << e.what() << std::endl;
+        GWARNING(m_id) << "read response exception: " << e.what();
         status(responsereaderstatus::EnumResponseReaderStatus::connectionClosed);
         return;
     }
@@ -155,16 +155,14 @@ void ResponseReader::readResponse(const size_t& timeout) {
     //    m_stream.str("");
     //        cout << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
     //                << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec << endl;
-    //    Util::output(m_vin, m_stream.str());
     //    m_stream.str("");
     //    m_stream << "response encryptionAlgorithm: " << (int) packetHdrTmp->encryptionAlgorithm;
-    //    Util::output(m_vin, m_stream.str());
 
     if (packetHdrTmp->responseFlag == responseflag::enumResponseFlag::success) {
-//        r_logger.info(m_vin, "response ok");
+        //        GINFO(m_vin, "response ok");
         status(responsereaderstatus::EnumResponseReaderStatus::responseOk);
     } else {
-//        r_logger.info(m_vin, "response not ok");
+        //        GINFO(m_vin, "response not ok");
         status(responsereaderstatus::EnumResponseReaderStatus::responseNotOk);
     }
     m_responseBuf.rewind();

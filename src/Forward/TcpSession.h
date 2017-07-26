@@ -20,8 +20,6 @@
 #include <boost/thread/mutex.hpp>
 #include "ByteBuffer.h"
 #include "DataFormatForward.h"
-#include "Logger.h"
-
 
 class TcpServer;
 
@@ -52,7 +50,6 @@ private:
     boost::asio::deadline_timer m_timer;
     size_t m_heartBeatCycle;
     std::stringstream m_stream;
-    Logger& m_logger;
     boost::mutex m_mutex;
 
     friend class TcpServer;
