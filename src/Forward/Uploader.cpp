@@ -93,7 +93,9 @@ void Uploader::task() {
                 setupConnection();
                 for (int i = 0; i < 5; i++) {
                     setupConnAndLogin();
+                    boost::this_thread::sleep(boost::posix_time::seconds(2));
                     logout();
+                    boost::this_thread::sleep(boost::posix_time::seconds(2));
                 }
                 GINFO(m_id) << "login & logout 5 times done ";
                 GDEBUG(m_id) << "login & logout 5 times done ";
