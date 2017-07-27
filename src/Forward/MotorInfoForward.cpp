@@ -109,7 +109,7 @@ void signal_handler(int signal) {
 
 void uploadTask(const size_t& no) {
     try {
-        Uploader uploader(no, (const EnumRunMode&) resource::getResource()->getMode());
+        Uploader uploader(no);
         uploader.task();
     } catch (std::exception &e) {
         GWARNING("uploadTask") << "exception: " << e.what();

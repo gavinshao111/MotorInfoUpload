@@ -28,12 +28,13 @@ namespace sinks = boost::log::sinks;
 namespace expr = boost::log::expressions;
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(my_logger, src::logger_mt)
-boost::log::sources::severity_logger<boost::log::trivial::severity_level > gavinlog::s_slg;
+boost::log::sources::severity_logger<gavinlog::severity_level > gavinlog::s_slg;
 
 void gavinlog::init(std::string&& directory) {
     std::string info_dir = directory + "/info";
     std::string warn_dir = directory + "/warn";
     std::string debug_dir = directory + "/debug";
+    std::string msg_dir = directory + "/message";
     
     if (boost::filesystem::exists(info_dir) == false) {
         boost::filesystem::create_directories(info_dir);
@@ -44,10 +45,22 @@ void gavinlog::init(std::string&& directory) {
     if (boost::filesystem::exists(debug_dir) == false) {
         boost::filesystem::create_directories(debug_dir);
     }
+    if (boost::filesystem::exists(msg_dir) == false) {
+        boost::filesystem::create_directories(msg_dir);
+    }
 
+    auto pSinkMsg = boost::log::add_file_log
+            (
+            keywords::filter = expr::attr< gavinlog::severity_level >("Severity") == gavinlog::severity_level::report, 
+            keywords::open_mode = std::ios::app,
+            keywords::file_name = msg_dir + "/%Y%m%d.log",
+            keywords::rotation_size = 10 * 1024 * 1024
+            );
+    pSinkMsg->locked_backend()->auto_flush(true);
+    
     auto pSinkDeb = boost::log::add_file_log
             (
-            keywords::filter = expr::attr< boost::log::trivial::severity_level >("Severity") == boost::log::trivial::debug, 
+            keywords::filter = expr::attr< gavinlog::severity_level >("Severity") == gavinlog::severity_level::debug, 
             keywords::open_mode = std::ios::app,
             keywords::file_name = debug_dir + "/%Y%m%d.log",
             keywords::rotation_size = 10 * 1024 * 1024,
@@ -64,11 +77,10 @@ void gavinlog::init(std::string&& directory) {
     
     auto pSinkInfo = boost::log::add_file_log
             (
-            keywords::filter = expr::attr< boost::log::trivial::severity_level >("Severity") == boost::log::trivial::info, 
+            keywords::filter = expr::attr< gavinlog::severity_level >("Severity") == gavinlog::severity_level::info, 
             keywords::open_mode = std::ios::app,
             keywords::file_name = info_dir + "/%Y%m%d.log",
             keywords::rotation_size = 10 * 1024 * 1024,
-            keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
             keywords::format =
             (
             expr::stream
@@ -81,11 +93,10 @@ void gavinlog::init(std::string&& directory) {
     
     auto pSinkWarn = boost::log::add_file_log
             (
-            keywords::filter = expr::attr< boost::log::trivial::severity_level >("Severity") >= boost::log::trivial::warning,
+            keywords::filter = expr::attr< gavinlog::severity_level >("Severity") == gavinlog::severity_level::warning,
             keywords::open_mode = std::ios::app,
             keywords::file_name = warn_dir + "/%Y%m%d.log",
             keywords::rotation_size = 10 * 1024 * 1024,
-            keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
             keywords::format =
             (
             expr::stream

@@ -37,7 +37,7 @@ typedef enum {
 
 class Uploader {
 public:
-    Uploader(const size_t& no, const EnumRunMode& mode);
+    Uploader(const size_t& no);
     virtual ~Uploader();
     void task();
 
@@ -53,8 +53,8 @@ private:
     void forwardCarData();
     void setupConnAndLogin();
     void logout();
-    void static outputMsg(std::ostream& out, const enumSystem& system, const std::string& vin,
-            const time_t& collectTime, const time_t& sendTime, const bytebuf::ByteBuffer* data = NULL);
+    void static outputMsg(const enumSystem& system, const std::string& vin,
+            const time_t& collectTime, const time_t& sendTime, bytebuf::ByteBuffer* data = NULL);
 
     resource* r_resource;
     blockqueue::BlockQueue<BytebufSPtr_t>& r_carDataQueue;

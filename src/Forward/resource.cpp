@@ -28,6 +28,7 @@
 #endif
 #include <boost/filesystem.hpp>
 #include "utility.h"
+#include "logger.h"
 
 using namespace std;
 
@@ -69,23 +70,8 @@ resource::resource() {
     section.assign("Runing");
     uploadChannelNumber = pt.get<int>(section + ".UploadChannelNumber", 1);
     mode = pt.get<int>(section + ".Mode", 1);
-    string messageOutputFilePath = pt.get<string>(section + ".MessageOutputFileFolder", "");
     system = (enumSystem) pt.get<int>(section + ".System", 1);
     
-    boost::filesystem::path path(messageOutputFilePath);
-    if (!boost::filesystem::exists(path))
-        boost::filesystem::create_directories(path);
-    if (messageOutputFilePath.at(messageOutputFilePath.length() - 1) != '/')
-        messageOutputFilePath.append("/");
-    messageOutputFilePath.append(gutility::timeToStr(Constant::timeFormatForFile));
-    messageOutputFilePath.append(".txt");
-
-    messageOs.open(messageOutputFilePath.c_str(), ofstream::out | ofstream::trunc | ofstream::binary);
-    // 输出到日志 vin - collect time - send time - data(decimal)
-    messageOs << setiosflags(ios::left)
-            << setw(21) << setfill(' ') << "vin"
-            << setw(23) << setfill(' ') << "collect_time"
-            << setw(23) << setfill(' ') << "send_time";
     string systemStr;
     switch (system) {
         case enumSystem::bin:
@@ -103,7 +89,12 @@ resource::resource() {
         default:
             throw runtime_error("unrecognized system enumeration: " + to_str(system));
     }
-    messageOs << systemStr << " data\n" << endl;
+    // 输出到日志 vin - collect time - send time - data(decimal)   
+    GREPORT << setiosflags(ios::left)
+            << setw(21) << setfill(' ') << "vin"
+            << setw(23) << setfill(' ') << "collect_time"
+            << setw(23) << setfill(' ') << "send_time"
+            << systemStr << " data\n";
 }
 
 resource* resource::getResource() {
@@ -113,5 +104,4 @@ resource* resource::getResource() {
 }
 
 resource::~resource() {
-    messageOs.close();
 }

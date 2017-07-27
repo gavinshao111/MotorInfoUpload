@@ -38,14 +38,14 @@ extern bool offline;
 bool Uploader::isConnectWithPublicServer(false);
 // no 从0开始
 
-Uploader::Uploader(const size_t& no, const EnumRunMode& mode) :
-m_mode(mode),
+Uploader::Uploader(const size_t& no) :
 m_serialNumber(1),
 m_lastloginTime(0),
 m_lastSendTime(0),
 m_uploaderStatus(uploaderstatus::EnumUploaderStatus::init),
 r_resource(resource::getResource()),
 r_carDataQueue(r_resource->getVehicleDataQueue()),
+m_mode((EnumRunMode)r_resource->getMode()),
 m_publicServer(r_resource->getPublicServerIp(), r_resource->getPublicServerPort()),
 m_vin(Constant::vinInital),
 m_responseReader(no, m_publicServer) {
@@ -231,7 +231,7 @@ void Uploader::setupConnAndLogin() {
                         << "s timeout when login, sleep " << timeToSleep << "s and resend";
                 GWARNING(m_id) << "read response " << r_resource->getReadResponseTimeOut()
                         << "s timeout when login, sleep " << timeToSleep << "s and resend";
-                
+
                 boost::this_thread::sleep(boost::posix_time::seconds(timeToSleep));
                 break;
             }
@@ -361,36 +361,36 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
 
         GINFO(m_vin) << sizeToSend << " bytes of " << cmdTypeStr << " data uploaded";
 
-        if (r_resource->getUploadChannelNumber() > 1)
-            boost::unique_lock<boost::mutex> lk(r_resource->getMsgMtx());
-        outputMsg(r_resource->getMessageOs(), r_resource->getSystem(), m_vin, collectTime, m_lastSendTime, dataToSend.get());
+        outputMsg(r_resource->getSystem(), m_vin, collectTime, m_lastSendTime, dataToSend.get());
     } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         GWARNING("Uploader::tcpSendData") << "exception: " << e.what();
         m_uploaderStatus = uploaderstatus::EnumUploaderStatus::connectionClosed;
     }
 }
 
-void Uploader::outputMsg(ostream& out, const enumSystem& system, const string& vin,
-        const time_t& collectTime, const time_t& sendTime, const ByteBuffer* data/* = NULL*/) {
-    out << setiosflags(ios::left)
+void Uploader::outputMsg(const enumSystem& system, const string& vin,
+        const time_t& collectTime, const time_t& sendTime, ByteBuffer* data/* = NULL*/) {
+    if (data == NULL)
+        return;
+
+    string data_str;
+    switch (system) {
+        case enumSystem::oct:
+            data_str = data->to_oct();
+            break;
+        case enumSystem::dec:
+            data_str = data->to_dec();
+            break;
+        case enumSystem::bin:
+        case enumSystem::hex:
+            data_str = data->to_hex();
+            break;
+        default:
+            throw runtime_error("unrecognized system enumeration: " + to_str(system));
+    }
+    GREPORT << setiosflags(ios::left)
             << setw(21) << setfill(' ') << vin
             << setw(23) << setfill(' ') << gutility::timeToStr(collectTime)
-            << setw(23) << setfill(' ') << gutility::timeToStr(sendTime);
-    if (data != NULL) {
-        switch (system) {
-            case enumSystem::oct:
-                data->outputAsOct(out);
-                break;
-            case enumSystem::dec:
-                data->outputAsDec(out);
-                break;
-            case enumSystem::bin:
-            case enumSystem::hex:
-                data->outputAsHex(out);
-                break;
-            default:
-                throw runtime_error("unrecognized system enumeration: " + to_str(system));
-        }
-    }
-    out << endl;
+            << setw(23) << setfill(' ') << gutility::timeToStr(sendTime)
+            << data_str;
 }
