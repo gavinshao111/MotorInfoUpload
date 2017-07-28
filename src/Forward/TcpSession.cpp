@@ -184,7 +184,7 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
-        GWARNING(m_vin) << "read vehicle session timeout";
+//        GWARNING(m_vin) << "read vehicle session timeout";
         m_socket.close();
     }
 }
