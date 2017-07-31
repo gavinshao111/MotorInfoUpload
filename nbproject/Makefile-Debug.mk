@@ -51,8 +51,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-std=c++0x -DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK
-CXXFLAGS=-std=c++0x -DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK
+CCFLAGS=-DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK
+CXXFLAGS=-DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -68,7 +68,7 @@ LDLIBSOPTIONS=-L../GavinLib/lib
 	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motorinfoupload
 
 motorinfoupload: ${OBJECTFILES}
-	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -std=c++0x -lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup
+	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup
 
 ${OBJECTDIR}/src/Forward/Constant.o: src/Forward/Constant.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward

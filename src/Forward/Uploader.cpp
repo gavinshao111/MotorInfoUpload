@@ -82,8 +82,6 @@ m_responseReader(no, m_publicServer) {
 Uploader::~Uploader() {
 }
 
-// 平台运行后登入，不再登出，直到TCP连接中断。
-
 void Uploader::task() {
     boost::thread responseReaderThread(boost::bind(&ResponseReader::task, boost::ref(m_responseReader)));
     try {
