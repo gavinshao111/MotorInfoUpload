@@ -20,12 +20,6 @@
 #include <stdexcept>
 #include <fstream>
 #include <iomanip>
-#if __cplusplus < 201103L
-#include <boost/lexical_cast.hpp>
-#define to_str(value) boost::lexical_cast<string>(value)
-#else
-#define to_str(value) to_string((int)value)
-#endif
 #include <boost/filesystem.hpp>
 #include "utility.h"
 #include "logger.h"
@@ -87,7 +81,7 @@ resource::resource() {
             systemStr = "hexadecimal";
             break;
         default:
-            throw runtime_error("unrecognized system enumeration: " + to_str(system));
+            throw runtime_error("unrecognized system enumeration: " + to_string((int)system));
     }
     // 输出到日志 vin - collect time - send time - data(decimal)   
     GREPORT << setiosflags(ios::left)

@@ -21,12 +21,6 @@
 #include "Constant.h"
 #include "ResponseReader.h"
 #include <iostream>
-#if __cplusplus < 201103L
-#include <boost/lexical_cast.hpp>
-#define to_str(value) boost::lexical_cast<string>(value)
-#else
-#define to_str(value) to_string((int)value)
-#endif
 #include "logger.h"
 #include "utility.h"
 
@@ -45,7 +39,7 @@ m_lastSendTime(0),
 m_uploaderStatus(uploaderstatus::EnumUploaderStatus::init),
 r_resource(resource::getResource()),
 r_carDataQueue(r_resource->getVehicleDataQueue()),
-m_mode((EnumRunMode)r_resource->getMode()),
+m_mode((EnumRunMode) r_resource->getMode()),
 m_publicServer(r_resource->getPublicServerIp(), r_resource->getPublicServerPort()),
 m_vin(Constant::vinInital),
 m_responseReader(no, m_publicServer) {
@@ -53,7 +47,7 @@ m_responseReader(no, m_publicServer) {
     if (usernameInIni.length() > sizeof (m_loginData.username)
             || (r_resource->getPublicServerPassword().length() > sizeof (m_loginData.password)))
         throw runtime_error("Uploader(): PublicServerUserName or PublicServerPassword Illegal");
-    m_id = "Uploader." + to_str(no);
+    m_id = "Uploader." + to_string(no);
     usernameInIni.copy((char*) m_loginData.username, sizeof (m_loginData.username));
     // 平台符合性检测：多链路的平台唯一码、密码与原链路相同，仅用户名为原用户名+“1”
     // 老赵：第no条辅链路，就加no个字符“1”
@@ -89,7 +83,7 @@ void Uploader::task() {
             case EnumRunMode::vehicleCompliance:
             case EnumRunMode::platformCompliance:
                 setupConnection();
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 3; i++) {
                     setupConnAndLogin();
                     boost::this_thread::sleep(boost::posix_time::seconds(2));
                     logout();
@@ -103,7 +97,7 @@ void Uploader::task() {
                 //setupConnAndLogin();
                 break;
             default:
-                throw runtime_error("unrecognized run mode: " + to_str(m_mode));
+                throw runtime_error("unrecognized run mode: " + to_string((int) m_mode));
         }
         for (;;) {
             // 平台符合性检测需要离线10min
@@ -132,7 +126,7 @@ void Uploader::task() {
 
             forwardCarData();
         }
-        logout();
+        logout(false);
     } catch (exception &e) {
         GWARNING(m_id) << "exception: " << e.what();
     } catch (boost::thread_interrupted&) {
@@ -239,13 +233,13 @@ void Uploader::setupConnAndLogin() {
                 resend = false;
                 break;
             case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
-                throw runtime_error("Uploader::setupConnAndLogin(): response not ok, response flag: " + to_str((int) m_responseReader.responseFlag()));
+                throw runtime_error("Uploader::setupConnAndLogin(): response not ok, response flag: " + to_string((int) m_responseReader.responseFlag()));
             case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
                 //                throw runtime_error("Uploader::setupConnAndLogin(): bad response format");
                 GWARNING(m_id) << "bad response format when setupConnAndLogin";
                 break;
             default:
-                throw runtime_error("Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " + to_str(m_responseReader.status()));
+                throw runtime_error("Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " + to_string((int) m_responseReader.status()));
         }
     } while (resend);
 
@@ -254,14 +248,15 @@ void Uploader::setupConnAndLogin() {
     GINFO(m_id) << "platform login done";
 }
 
-void Uploader::logout() {
+void Uploader::logout(bool needResponse/* = true*/) {
     updateLogoutData();
     tcpSendData(enumCmdCode::platformLogout);
-    GINFO(m_id) << "waiting for public server's response...";
-    if (m_responseReader.waitNextStatus() != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
-        throw runtime_error("response not ok when logout, response status: " + to_str(m_responseReader.status()));
+    if (needResponse) {
+        GINFO(m_id) << "waiting for public server's response...";
+        if (m_responseReader.waitNextStatus() != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
+            throw runtime_error("response not ok when logout, response status: " + to_string((int) m_responseReader.status()));
+        }
     }
-
     GINFO(m_id) << "platform logout done";
 }
 
@@ -340,7 +335,7 @@ void Uploader::tcpSendData(const uint8_t& cmd) {
                 dataToSend = m_carData;
                 break;
             default:
-                throw runtime_error("[" + m_vin + "] Uploader::tcpSendData(): Illegal cmd: " + to_str(cmd));
+                throw runtime_error("[" + m_vin + "] Uploader::tcpSendData(): Illegal cmd: " + to_string((int) cmd));
         }
 
         TimeForward_t* ptime = (TimeForward_t*) (dataToSend->array() + sizeof (DataPacketHeader));
@@ -386,7 +381,7 @@ void Uploader::outputMsg(const enumSystem& system, const string& vin,
             data_str = data->to_hex();
             break;
         default:
-            throw runtime_error("unrecognized system enumeration: " + to_str(system));
+            throw runtime_error("unrecognized system enumeration: " + to_string((int) system));
     }
     GREPORT << setiosflags(ios::left)
             << setw(21) << setfill(' ') << vin

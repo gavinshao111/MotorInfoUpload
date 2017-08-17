@@ -20,12 +20,6 @@
 #include "Constant.h"
 #include "../Util.h"
 #include "logger.h"
-#if __cplusplus < 201103L
-#include <boost/lexical_cast.hpp>
-#define to_str(value) boost::lexical_cast<string>(value)
-#else
-#define to_str(value) to_string((int)value)
-#endif
 
 using namespace bytebuf;
 using namespace std;
@@ -36,7 +30,7 @@ m_responseBuf(512),
 r_publicServer(publicServer),
 m_vin(Constant::vinInital),
 m_responseStatus(responsereaderstatus::EnumResponseReaderStatus::init) {
-    m_id = "ResponseReader." + to_str(no);
+    m_id = "ResponseReader." + to_string(no);
 }
 
 //ResponseReader::ResponseReader(const ResponseReader& orig) {
@@ -73,8 +67,10 @@ void ResponseReader::task() {
                                 resource::getResource()->getVechicleSessionTable().find(m_vin);
                         if (iter == resource::getResource()->getVechicleSessionTable().end())
                             GWARNING(m_vin) << "vin not existing in vechicle session table when try to forward response";
-                        else
+                        else {
                             iter->second->write(m_responseBuf);
+                            GINFO(m_vin) << "response forwarded ";
+                        }
                     }
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
@@ -87,7 +83,7 @@ void ResponseReader::task() {
                     break;
                 default:
                     throw runtime_error("ResponseReader::forwardCarData(): unrecognize SenderStatus code: "
-                            + to_str(m_responseStatus));
+                            + to_string((int)m_responseStatus));
             }
         }
     } catch (exception &e) {
