@@ -16,6 +16,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 #include <iostream>
+#include <boost/chrono.hpp>
 #include "resource.h"
 #include "Constant.h"
 #include "../Util.h"
@@ -74,10 +75,9 @@ void ResponseReader::task() {
                     }
                     break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
-                {
                     GINFO(m_vin) << "response not ok, response flag: "
                             << (int) m_packetHdr->responseFlag;
-                }
+                    break;
                 case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
                     GWARNING(m_vin) << "bad response format: " << m_stream.str();
                     break;
@@ -111,7 +111,7 @@ void ResponseReader::readResponse(const size_t& timeout) {
         if (packetHdrTmp->startCode[0] != '#' || packetHdrTmp->startCode[1] != '#') {
             status(responsereaderstatus::EnumResponseReaderStatus::responseFormatErr);
             m_stream << "start code expect to be 35, 35(##), actually is "
-                    << (int) packetHdrTmp->startCode[0] << (int) packetHdrTmp->startCode[1];
+                    << (int) packetHdrTmp->startCode[0] << ", " << (int) packetHdrTmp->startCode[1];
             return;
         }
 
@@ -148,17 +148,9 @@ void ResponseReader::readResponse(const size_t& timeout) {
     m_packetHdr = packetHdrTmp;
     responseTime = (TimeForward_t*) (m_responseBuf.array() + sizeof (DataPacketHeader_t));
 
-    //    m_stream.str("");
-    //        cout << "response time: " << (int) responseTime->year << '-' << (int) responseTime->mon << '-' << (int) responseTime->mday << " "
-    //                << (int) responseTime->hour << ':' << (int) responseTime->min << ':' << (int) responseTime->sec << endl;
-    //    m_stream.str("");
-    //    m_stream << "response encryptionAlgorithm: " << (int) packetHdrTmp->encryptionAlgorithm;
-
     if (packetHdrTmp->responseFlag == responseflag::enumResponseFlag::success) {
-        //        GINFO(m_vin, "response ok");
         status(responsereaderstatus::EnumResponseReaderStatus::responseOk);
     } else {
-        //        GINFO(m_vin, "response not ok");
         status(responsereaderstatus::EnumResponseReaderStatus::responseNotOk);
     }
     m_responseBuf.rewind();
@@ -166,7 +158,8 @@ void ResponseReader::readResponse(const size_t& timeout) {
 
 const responsereaderstatus::EnumResponseReaderStatus& ResponseReader::waitNextStatus() {
     boost::unique_lock<boost::mutex> lk(statusMtx);
-    newStatus.wait(lk);
+    if (newStatus.wait_for(lk, boost::chrono::seconds(2)) == boost::cv_status::timeout)
+        m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::timeout;
     return m_responseStatus;
 }
 
