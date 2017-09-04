@@ -82,17 +82,20 @@ void Uploader::task() {
         switch (m_mode) {
             case EnumRunMode::vehicleCompliance:
             case EnumRunMode::platformCompliance:
+            {
                 setupConnection();
-                for (int i = 0; i < 3; i++) {
+                size_t loginTimes = 3;
+                for (int i = 0; i < loginTimes; i++) {
                     setupConnAndLogin();
                     boost::this_thread::sleep(boost::posix_time::seconds(2));
                     logout();
                     boost::this_thread::sleep(boost::posix_time::seconds(2));
                 }
-                GINFO(m_id) << "login & logout 5 times done ";
-                GDEBUG(m_id) << "login & logout 5 times done ";
+                GINFO(m_id) << "login & logout " << loginTimes << " times done ";
+                GDEBUG(m_id) << "login & logout " << loginTimes << " times done ";
                 setupConnAndLogin();
                 break;
+            }
             case EnumRunMode::release:
                 //setupConnAndLogin();
                 break;
