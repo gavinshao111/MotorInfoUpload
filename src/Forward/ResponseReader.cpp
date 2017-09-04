@@ -70,20 +70,31 @@ void ResponseReader::task() {
                             GWARNING(m_vin) << "vin not existing in vechicle session table when try to forward response";
                         else {
                             iter->second->write(m_responseBuf);
-                            GINFO(m_vin) << "response forwarded ";
+                            GINFO(m_vin) << "vehicle login ok response forwarded";
                         }
                     }
                     break;
-                case responsereaderstatus::EnumResponseReaderStatus::responseNotOk:
+                case responsereaderstatus::EnumResponseReaderStatus::responseNotOk: {
                     GINFO(m_vin) << "response not ok, response flag: "
                             << (int) m_packetHdr->responseFlag;
+                    resource::SessionTable_t::iterator iter =
+                            resource::getResource()->getVechicleSessionTable().find(m_vin);
+                    if (iter == resource::getResource()->getVechicleSessionTable().end())
+                        GWARNING(m_vin) << "vin not existing in vechicle session table when try to forward response";
+                    else {
+                        iter->second->write(m_responseBuf);
+                        GINFO(m_vin) << "response not ok forwarded";
+                    }
                     break;
+                }
                 case responsereaderstatus::EnumResponseReaderStatus::responseFormatErr:
+                {
                     GWARNING(m_vin) << "bad response format: " << m_stream.str();
                     break;
+                }
                 default:
                     throw runtime_error("ResponseReader::forwardCarData(): unrecognize SenderStatus code: "
-                            + to_string((int)m_responseStatus));
+                            + to_string((int) m_responseStatus));
             }
         }
     } catch (exception &e) {
