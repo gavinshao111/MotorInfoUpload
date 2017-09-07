@@ -64,10 +64,6 @@ public:
         return loginIntervals;
     }
 
-    const size_t& getReadResponseTimeOut() const {
-        return readResponseTimeOut;
-    }
-
     const int& getEnterprisePlatformTcpServicePort() const {
         return enterprisePlatformTcpServicePort;
     }
@@ -134,10 +130,6 @@ private:
 
     int enterprisePlatformTcpServicePort;
 
-    /*
-     * 等待公共平台回应超时（ReadResponseTimeOut），
-     */
-    size_t readResponseTimeOut;
     /* 
      * 登入没有回应每隔1min（LoginTimeout）重新发送登入数据。
      * 3（LoginTimes）次登入没有回应，每隔30min（loginTimeout2）重新发送登入数据。

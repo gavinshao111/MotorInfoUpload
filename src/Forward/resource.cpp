@@ -55,7 +55,6 @@ resource::resource() {
     maxSerialNumber = pt.get<int>(section + ".MaxSerialNumber", 1);
 
     section.assign("ConnectToPublicServer");
-    readResponseTimeOut = pt.get<int>(section + ".ReadResponseTimeOut", 1);
     loginTimes = pt.get<int>(section + ".LoginTimes", 1);
     loginIntervals = pt.get<int>(section + ".LoginIntervals", 1);
     loginIntervals2 = pt.get<int>(section + ".LoginIntervals2", 1);

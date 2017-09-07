@@ -168,12 +168,10 @@ void Uploader::setupConnection() {
  * 我平台转发所有上级平台的错误应答，和车辆登入的成功应答。其他应答不转发，默认成功。
  */
 void Uploader::forwardCarData() {
-    // 若发送异常，则当前车机数据包设为补发数据并放回发送队列。
+    // 若发送异常，则当前车机数据包放回发送队列。
     m_uploaderStatus = uploaderstatus::EnumUploaderStatus::init;
     tcpSendData(m_packetHdr->cmdId);
     if (m_uploaderStatus == uploaderstatus::EnumUploaderStatus::connectionClosed) {
-        //        if (m_packetHdr->cmdId == enumCmdCode::realtimeUpload)
-        //            m_packetHdr->cmdId = enumCmdCode::reissueUpload;
         r_carDataQueue.put(m_carData, true);
     }
 }
@@ -190,14 +188,22 @@ void Uploader::setupConnAndLogin() {
      * 登录没有回应每隔1min（LoginTimeout）重新发送登入数据。
      * 重复resendLoginTime次没有回应，每隔30min（loginTimeout2）重新发送登入数据。
      */
-    bool resend;
+
+    size_t wait_timeout = r_resource->getLoginIntervals();
     size_t i = 0;
-    do {
-        resend = true;
-        i++;
+    for (bool resend = true; resend; ++i) {
         if (!m_publicServer.isConnected()) {
             setupConnection();
+            i = 0;
+            wait_timeout = r_resource->getLoginIntervals();
         }
+        
+        /*
+         * 登入没有回应每隔1min（LoginIntervals）重新发送登入数据。
+         * 3（LoginTimes）次登入没有回应，每隔30min（LoginIntervals2）重新发送登入数据。
+         */
+        if (i == r_resource->getLoginTimes())
+            wait_timeout = r_resource->getLoginIntervals2();
 
         now = time(NULL);
         timeTM = localtime(&now);
@@ -216,20 +222,15 @@ void Uploader::setupConnAndLogin() {
 
         tcpSendData(enumCmdCode::platformLogin);
         GINFO(m_id) << "waiting for public server's response...";
-        switch (m_responseReader.waitNextStatus()) {
+
+        switch (m_responseReader.waitNextStatus(wait_timeout)) {
             case responsereaderstatus::EnumResponseReaderStatus::connectionClosed:
                 isConnectWithPublicServer = false;
                 break;
             case responsereaderstatus::EnumResponseReaderStatus::timeout:
             {
-                size_t timeToSleep = r_resource->getLoginTimes() >= i ?
-                        r_resource->getLoginIntervals() : r_resource->getLoginIntervals2();
-                GINFO(m_id) << "read response " << r_resource->getReadResponseTimeOut()
-                        << "s timeout when login, sleep " << timeToSleep << "s and resend";
-                GWARNING(m_id) << "read response " << r_resource->getReadResponseTimeOut()
-                        << "s timeout when login, sleep " << timeToSleep << "s and resend";
-
-                boost::this_thread::sleep(boost::posix_time::seconds(timeToSleep));
+                GINFO(m_id) << "wait response " << wait_timeout << "s timeout when login";
+                GWARNING(m_id) << "wait response " << wait_timeout << "s timeout when login";
                 break;
             }
             case responsereaderstatus::EnumResponseReaderStatus::responseOk:
@@ -244,7 +245,7 @@ void Uploader::setupConnAndLogin() {
             default:
                 throw runtime_error("Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " + to_string((int) m_responseReader.status()));
         }
-    } while (resend);
+    }
 
     m_serialNumber++;
     m_lastloginTime = time(NULL);
@@ -256,7 +257,7 @@ void Uploader::logout(bool needResponse/* = true*/) {
     tcpSendData(enumCmdCode::platformLogout);
     if (needResponse) {
         GINFO(m_id) << "waiting for public server's response...";
-        if (m_responseReader.waitNextStatus() != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
+        if (m_responseReader.waitNextStatus(2) != responsereaderstatus::EnumResponseReaderStatus::responseOk) {
             throw runtime_error("response not ok when logout, response status: " + to_string((int) m_responseReader.status()));
         }
     }

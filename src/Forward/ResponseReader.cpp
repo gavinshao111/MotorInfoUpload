@@ -42,10 +42,10 @@ ResponseReader::~ResponseReader() {
 
 void ResponseReader::task() {
     try {
-        int timeout = resource::getResource()->getReadResponseTimeOut();
+        int timeout = 0; //block to read
         for (;;) {
             if (!r_publicServer.isConnected()) {
-                boost::unique_lock<boost::mutex> lk(statusMtx);
+                boost::unique_lock<boost::mutex> lk(m_statusMtx);
                 m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::init;
                 try {
                     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
@@ -70,7 +70,7 @@ void ResponseReader::task() {
                             GWARNING(m_vin) << "vin not existing in vechicle session table when try to forward response";
                         else {
                             iter->second->write(m_responseBuf);
-                            GINFO(m_vin) << "vehicle login ok response forwarded";
+                            GINFO(m_vin) << "response ok forwarded";
                         }
                     }
                     break;
@@ -167,15 +167,15 @@ void ResponseReader::readResponse(const size_t& timeout) {
     m_responseBuf.rewind();
 }
 
-const responsereaderstatus::EnumResponseReaderStatus& ResponseReader::waitNextStatus() {
-    boost::unique_lock<boost::mutex> lk(statusMtx);
-    if (newStatus.wait_for(lk, boost::chrono::seconds(2)) == boost::cv_status::timeout)
+const responsereaderstatus::EnumResponseReaderStatus& ResponseReader::waitNextStatus(const size_t& second) {
+    boost::unique_lock<boost::mutex> lk(m_statusMtx);
+    if (m_newStatus.wait_for(lk, boost::chrono::seconds(second)) == boost::cv_status::timeout)
         m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::timeout;
     return m_responseStatus;
 }
 
 void ResponseReader::status(const responsereaderstatus::EnumResponseReaderStatus& status) {
-    boost::unique_lock<boost::mutex> lk(statusMtx);
+    boost::unique_lock<boost::mutex> lk(m_statusMtx);
     m_responseStatus = status;
-    newStatus.notify_all();
+    m_newStatus.notify_all();
 }

@@ -43,7 +43,7 @@ public:
         return m_responseStatus;
     }
 
-    const responsereaderstatus::EnumResponseReaderStatus& waitNextStatus();
+    const responsereaderstatus::EnumResponseReaderStatus& waitNextStatus(const size_t& second);
 
     uint8_t responseFlag() const {
         return m_packetHdr->responseFlag;
@@ -63,8 +63,8 @@ private:
     enumCmdCode m_responsePacketType;
     std::string m_detail;
     std::string m_id;
-    boost::mutex statusMtx;
-    boost::condition_variable newStatus;
+    boost::mutex m_statusMtx;
+    boost::condition_variable m_newStatus;
     
     void readResponse(const size_t& timeout);
     

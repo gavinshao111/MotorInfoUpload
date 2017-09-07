@@ -32,6 +32,7 @@ void TcpServer::acceptHandler(SessionRef_t session, const boost::system::error_c
         m_acceptor.get_io_service().stop();
         return;
     }
+    GDEBUG("TcpServer") << "new connection";
     startAccept();
     session->readHeader();
 }
