@@ -12,6 +12,7 @@
  */
 
 #include <list>
+#include <stdexcept>
 #if UseBoostMutex
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -24,6 +25,20 @@
 #ifndef BLOCKQUEUE_H
 #define BLOCKQUEUE_H
 namespace blockqueue {
+    
+    class interrupt_exception : public std::runtime_error {
+        interrupt_exception(const interrupt_exception& e) : std::runtime_error(e.what()) {
+        }
+
+        interrupt_exception(const std::string& message) : std::runtime_error(message) {
+        }
+
+        interrupt_exception() : std::runtime_error("") {
+        }
+
+        virtual ~interrupt_exception() throw () {
+        };    
+    };
 
     template <class DataT>
     class BlockQueue {

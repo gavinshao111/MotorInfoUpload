@@ -1,6 +1,8 @@
-target=./motorinfoupload
+base_dir=/mnt/hgfs/ShareFolder/project/MotorInfoUpload
+target=./motor_info_upload
 startup_script=startup.sh
-
+port=19007
+info_dir=log/info
 
 # start
 start(){
@@ -10,7 +12,9 @@ start(){
     fi
 
     sh $startup_script
-    echo "Service startup " $(date)
+    #echo "Service startup " $(date)
+    sleep 1
+    status
 }
 #stop
 stop(){
@@ -23,7 +27,8 @@ stop(){
             echo kill fail
             exit 1
         fi	
-        echo "Service stopped."			
+        echo "Service stopped."
+        status
     else
         echo "Service is not running."
     fi
@@ -45,6 +50,8 @@ status(){
     else
         echo "Service is not running."
     fi
+    tail -n 10 $base_dir/$info_dir/$(ls $info_dir -l -t|awk 'NR==2{print $9}')
+    lsof -i:$port
 }
 case $1 in
 start)

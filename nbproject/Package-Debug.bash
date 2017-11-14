@@ -13,8 +13,8 @@ CND_BUILDDIR=build
 CND_DLIB_EXT=so
 NBTMPDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}/tmp-packaging
 TMPDIRNAME=tmp-packaging
-OUTPUT_PATH=motorinfoupload
-OUTPUT_BASENAME=motorinfoupload
+OUTPUT_PATH=motor_info_upload
+OUTPUT_BASENAME=motor_info_upload
 PACKAGE_TOP_DIR=motorinfoupload/
 
 # Functions

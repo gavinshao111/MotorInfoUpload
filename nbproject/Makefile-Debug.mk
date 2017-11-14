@@ -61,64 +61,64 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=-L../GavinLib/lib
+LDLIBSOPTIONS=-L../GavinLib/libs
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motorinfoupload
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk motor_info_upload
 
-motorinfoupload: ${OBJECTFILES}
-	g++ -o motorinfoupload ${OBJECTFILES} ${LDLIBSOPTIONS} -lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup
+motor_info_upload: ${OBJECTFILES}
+	g++ -o motor_info_upload ${OBJECTFILES} ${LDLIBSOPTIONS} -lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup
 
 ${OBJECTDIR}/src/Forward/Constant.o: src/Forward/Constant.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Constant.o src/Forward/Constant.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Constant.o src/Forward/Constant.cpp
 
 ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/MotorInfoForward.o src/Forward/MotorInfoForward.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/MotorInfoForward.o src/Forward/MotorInfoForward.cpp
 
 ${OBJECTDIR}/src/Forward/PublicServer.o: src/Forward/PublicServer.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/PublicServer.o src/Forward/PublicServer.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/PublicServer.o src/Forward/PublicServer.cpp
 
 ${OBJECTDIR}/src/Forward/ResponseReader.o: src/Forward/ResponseReader.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/ResponseReader.o src/Forward/ResponseReader.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/ResponseReader.o src/Forward/ResponseReader.cpp
 
 ${OBJECTDIR}/src/Forward/TcpServer.o: src/Forward/TcpServer.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpServer.o src/Forward/TcpServer.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpServer.o src/Forward/TcpServer.cpp
 
 ${OBJECTDIR}/src/Forward/TcpSession.o: src/Forward/TcpSession.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpSession.o src/Forward/TcpSession.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/TcpSession.o src/Forward/TcpSession.cpp
 
 ${OBJECTDIR}/src/Forward/Uploader.o: src/Forward/Uploader.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Uploader.o src/Forward/Uploader.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Uploader.o src/Forward/Uploader.cpp
 
 ${OBJECTDIR}/src/Forward/logger.o: src/Forward/logger.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/logger.o src/Forward/logger.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/logger.o src/Forward/logger.cpp
 
 ${OBJECTDIR}/src/Forward/resource.o: src/Forward/resource.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/resource.o src/Forward/resource.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/resource.o src/Forward/resource.cpp
 
 ${OBJECTDIR}/src/Util.o: src/Util.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../GavinLib/ByteBuffer/src -I../GavinLib/GSocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Util.o src/Util.cpp
+	$(COMPILE.cc) -g -I../GavinLib/bytebuffer/src -I../GavinLib/gsocket/src -I../GavinLib/utility/src -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Util.o src/Util.cpp
 
 # Subprojects
 .build-subprojects:

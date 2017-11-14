@@ -55,19 +55,19 @@
       <compileType>
         <ccTool>
           <incDir>
-            <pElem>../GavinLib/ByteBuffer/src</pElem>
-            <pElem>../GavinLib/GSocket/src</pElem>
+            <pElem>../GavinLib/bytebuffer/src</pElem>
+            <pElem>../GavinLib/gsocket/src</pElem>
             <pElem>../GavinLib/utility/src</pElem>
           </incDir>
-          <commandLine>-std=c++0x -DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK</commandLine>
+          <commandLine>-DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK</commandLine>
         </ccTool>
         <linkerTool>
-          <output>motorinfoupload</output>
+          <output>motor_info_upload</output>
           <linkerAddLib>
-            <pElem>../GavinLib/lib</pElem>
+            <pElem>../GavinLib/libs</pElem>
           </linkerAddLib>
           <commandlineTool>g++</commandlineTool>
-          <commandLine>-std=c++0x -lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup</commandLine>
+          <commandLine>-lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup</commandLine>
         </linkerTool>
       </compileType>
       <item path="configurtion.ini" ex="false" tool="3" flavor2="0">
