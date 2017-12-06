@@ -32,13 +32,20 @@ extern bool offline;
 bool Uploader::isConnectWithPublicServer(false);
 // no 从0开始
 
+uint16_t Uploader::m_serialNumber(1);
+time_t Uploader::m_uploader_last_login_time(0);
+#if UseBoostMutex
+boost::mutex Uploader::m_serial_number_mtx;
+#else
+std::mutex Uploader::m_serial_number_mtx;
+#endif
+
 Uploader::Uploader(const size_t& no) :
-m_serialNumber(1),
-m_lastloginTime(0),
 m_lastSendTime(0),
 m_uploaderStatus(uploaderstatus::EnumUploaderStatus::init),
 r_resource(resource::getResource()),
-r_carDataQueue(r_resource->getVehicleDataQueue()),
+r_reissue_queue(r_resource->get_reissue_queue()),
+r_realtime_queue(r_resource->get_realtime_queue()),
 m_mode((EnumRunMode) r_resource->getMode()),
 m_publicServer(r_resource->getPublicServerIp(), r_resource->getPublicServerPort()),
 m_vin(Constant::vinInital),
@@ -50,7 +57,7 @@ m_responseReader(no, m_publicServer) {
     m_id = "Uploader." + to_string(no);
     usernameInIni.copy((char*) m_loginData.username, sizeof (m_loginData.username));
     // 平台符合性检测：多链路的平台唯一码、密码与原链路相同，仅用户名为原用户名+“1”
-    // 老赵：第no条辅链路，就加no个字符“1”
+    // 老赵：第no条辅链路，就加no个字符“1”,no从0开始
     for (int i = 0; i < no; i++) {
         if (sizeof (m_loginData.username) <= usernameInIni.length() + i)
             break;
@@ -84,12 +91,12 @@ void Uploader::task() {
             case EnumRunMode::platformCompliance:
             {
                 setupConnection();
-                size_t loginTimes = 3;
+                size_t loginTimes = 5;
                 for (int i = 0; i < loginTimes; i++) {
                     setupConnAndLogin();
-                    boost::this_thread::sleep(boost::posix_time::seconds(2));
+                    boost::this_thread::sleep(boost::posix_time::seconds(1));
                     logout();
-                    boost::this_thread::sleep(boost::posix_time::seconds(2));
+                    boost::this_thread::sleep(boost::posix_time::seconds(1));
                 }
                 GINFO(m_id) << "login & logout " << loginTimes << " times done ";
                 GDEBUG(m_id) << "login & logout " << loginTimes << " times done ";
@@ -116,7 +123,19 @@ void Uploader::task() {
                 setupConnAndLogin();
             }
             try {
-                m_carData = r_carDataQueue.take();
+//                if (r_reissue_queue.isEmpty() && (m_carData = r_realtime_queue.take(1)) == nullptr)
+//                    continue;
+                if (r_reissue_queue.isEmpty())
+                    m_carData = r_realtime_queue.take();
+                else {
+                    m_carData = r_reissue_queue.take();
+                    DataPacketHeader_t* hdr = (DataPacketHeader_t*) m_carData->array();
+                    if (hdr->cmdId == enumCmdCode::realtimeUpload) {
+                        hdr->cmdId = enumCmdCode::reissueUpload;
+                        *(m_carData->array() + m_carData->position() + m_carData->remaining() - 1) =
+                                Util::generateBlockCheckCharacter(*m_carData, 0, m_carData->remaining() - 1);
+                    }
+                }
             } catch (boost::thread_interrupted&) {
                 break;
             }
@@ -148,7 +167,7 @@ void Uploader::setupConnection() {
     m_publicServer.close();
     m_publicServer.connect();
     for (; !m_publicServer.isConnected(); boost::this_thread::sleep(boost::posix_time::seconds(r_resource->getReSetupPeroid()))) {
-        GWARNING(m_id) << "connect refused by Public Server. Reconnecting...\ndata queue size: " << r_carDataQueue.remaining();
+        GWARNING(m_id) << "connect refused by Public Server. Reconnecting...\nreissue queue size: " << r_reissue_queue.remaining();
         m_publicServer.connect();
     }
     GINFO(m_id) << "connection with public platform established";
@@ -172,7 +191,10 @@ void Uploader::forwardCarData() {
     m_uploaderStatus = uploaderstatus::EnumUploaderStatus::init;
     tcpSendData(m_packetHdr->cmdId);
     if (m_uploaderStatus == uploaderstatus::EnumUploaderStatus::connectionClosed) {
-        r_carDataQueue.put(m_carData, true);
+        r_reissue_queue.put(m_carData, true);
+        GDEBUG(m_id) << "connectionClosed, packet put into reissue_queue, remaining: " << r_reissue_queue.remaining();
+        // debug
+//        boost::this_thread::sleep(boost::posix_time::seconds(1));
     }
 }
 
@@ -197,7 +219,7 @@ void Uploader::setupConnAndLogin() {
             i = 0;
             wait_timeout = r_resource->getLoginIntervals();
         }
-        
+
         /*
          * 登入没有回应每隔1min（LoginIntervals）重新发送登入数据。
          * 3（LoginTimes）次登入没有回应，每隔30min（LoginIntervals2）重新发送登入数据。
@@ -210,13 +232,15 @@ void Uploader::setupConnAndLogin() {
         int nowDay = timeTM->tm_mday;
         int nowMon = timeTM->tm_mon;
         int nowYear = timeTM->tm_year;
-        localtime(&m_lastloginTime);
+        localtime(&m_uploader_last_login_time);
 
+        m_serial_number_mtx.lock();
         if (m_serialNumber > r_resource->getMaxSerialNumber()
                 || nowDay != timeTM->tm_mday
                 || nowMon != timeTM->tm_mon
                 || nowYear != timeTM->tm_year)
             m_serialNumber = 1;
+        m_serial_number_mtx.unlock();
 
         updateLoginData();
 
@@ -246,9 +270,10 @@ void Uploader::setupConnAndLogin() {
                 throw runtime_error("Uploader::setupConnAndLogin(): illegal ResponseReaderStatus code: " + to_string((int) m_responseReader.status()));
         }
     }
-
-    m_serialNumber++;
-    m_lastloginTime = time(NULL);
+    m_serial_number_mtx.lock();
+    ++m_serialNumber;   
+    m_serial_number_mtx.unlock();
+    m_uploader_last_login_time = time(NULL);
     GINFO(m_id) << "platform login done";
 }
 
@@ -276,7 +301,6 @@ void Uploader::updateLoginData() {
     m_loginData.time.hour = nowTM->tm_hour;
     m_loginData.time.min = nowTM->tm_min;
     m_loginData.time.sec = nowTM->tm_sec;
-    m_loginData.serialNumber = m_serialNumber;
     m_loginData.serialNumber = boost::asio::detail::socket_ops::host_to_network_short(m_serialNumber);
     m_vin.assign(r_resource->getPaltformId());
 }
@@ -305,7 +329,7 @@ void Uploader::updateLogoutData() {
  */
 void Uploader::tcpSendData(const uint8_t& cmd) {
     size_t sizeToSend;
-    BytebufSPtr_t dataToSend;
+    boost_bytebuf_sptr dataToSend;
     time_t collectTime;
     string cmdTypeStr;
     try {

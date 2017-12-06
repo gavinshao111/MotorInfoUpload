@@ -13,11 +13,11 @@
 #include <boost/log/trivial.hpp>
 
 #define GINFO(id)\
-    BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::info)) << "[" << (id) << "] "
+    BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::info)) << (id) << " "
 #define GDEBUG(id)\
-    BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::debug)) << "[" << (id) << "] "
+    BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::debug)) << (id) << " "
 #define GWARNING(id)\
-    BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::warning)) << "[" << (id) << "] "
+    BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::warning)) << (id) << " "
 #define GREPORT\
     BOOST_LOG_SEV((gavinlog::s_slg),(gavinlog::severity_level::report))
 

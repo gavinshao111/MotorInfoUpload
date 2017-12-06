@@ -142,7 +142,20 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
         }
         assert(bytes_transferred == m_dataUnitLen + 1);
         m_packetRef->limit(m_packetRef->position() + bytes_transferred);
-        parseDataUnit();
+        boost_bytebuf_sptr packet = parseDataUnit();
+        if (packet) {
+            auto& realtime_queue = resource::getResource()->get_realtime_queue();
+            auto& reissue_queue = resource::getResource()->get_reissue_queue();
+            // 离线期间受到的数据全部发放入补发队列，Uploader与上级平台重连后先发补发队列的数据
+            if (!Uploader::isConnectWithPublicServer) {
+                for (; !realtime_queue.isEmpty(); reissue_queue.put(realtime_queue.take()));
+                reissue_queue.put(packet);
+                GINFO(m_vin) << "reissue queue size: "
+                        << reissue_queue.remaining();
+            } else
+                realtime_queue.put(packet);
+        }
+
         if (!m_quit)
             readHeader();
     } catch (std::runtime_error& e) {
@@ -184,19 +197,21 @@ void TcpSession::writeHandler(const boost::system::error_code& error, size_t byt
 void TcpSession::readTimeoutHandler(const boost::system::error_code& error) {
     if (!error) {
         m_quit = true;
-//        GWARNING(m_vin) << "read vehicle session timeout";
+        //        GWARNING(m_vin) << "read vehicle session timeout";
         m_socket.close();
     }
 }
 
-// m_packetRef 包含了头部和数据单元和bcc，此时pos指向数据单元
-
-void TcpSession::parseDataUnit() {
+/**
+ * m_packetRef 包含了头部和数据单元和bcc，此时pos指向数据单元
+ */
+boost_bytebuf_sptr TcpSession::parseDataUnit() {
     assert(m_packetRef->position() == sizeof (DataPacketHeader));
+    //    GDEBUG(__func__) << "data unit: " << m_packetRef->to_hex();
     int cmdId = m_hdr->cmdId;
-    if (cmdId == enumCmdCode::reissueUpload || cmdId == enumCmdCode::realtimeUpload) {
-        BytebufSPtr_t rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
 
+    if (cmdId == enumCmdCode::reissueUpload || cmdId == enumCmdCode::realtimeUpload) {
+        auto rtData = boost::make_shared<bytebuf::ByteBuffer>(m_packetRef->capacity());
         try {
             rtData->put(m_packetRef->array(), 0, sizeof (DataPacketHeader));
             // 前6位为采集时间，最后一位为check code
@@ -223,12 +238,16 @@ void TcpSession::parseDataUnit() {
                         // 类型码(1) + 报警等级(1) + 通用报警标志(4)
                         rtData->put(*m_packetRef, 6);
                         size_t n = m_packetRef->get(m_packetRef->position()); // 可充电储能装置故障总数
+                        if (n == 0xff || n == 0xfe) n = 0;
                         rtData->put(*m_packetRef, 1 + n * 4);
                         n = m_packetRef->get(m_packetRef->position()); // 驱动电机故障总数
+                        if (n == 0xff || n == 0xfe) n = 0;
                         rtData->put(*m_packetRef, 1 + n * 4);
                         n = m_packetRef->get(m_packetRef->position()); // 发动机故障总数
+                        if (n == 0xff || n == 0xfe) n = 0;
                         rtData->put(*m_packetRef, 1 + n * 4);
                         n = m_packetRef->get(m_packetRef->position()); // 其他故障总数
+                        if (n == 0xff || n == 0xfe) n = 0;
                         rtData->put(*m_packetRef, 1 + n * 4);
                         break;
                     }
@@ -236,9 +255,15 @@ void TcpSession::parseDataUnit() {
                     {
                         m_packetRef->movePosition(1);
                         size_t sysn = m_packetRef->get();
+                        if (sysn == 0xff || sysn == 0xfe)
+                            sysn = 0;
+                        else if (sysn < 1 || sysn > 250)
+                            throw std::runtime_error("invalid 可充电储能电压子系统个数: " + std::to_string(sysn));
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(9);
                             size_t m = m_packetRef->get(); // 本帧单体电池总数
+                            if (m < 1 || m > 200)
+                                throw std::runtime_error("invalid 本帧单体电池总数: " + std::to_string(m));
                             m_packetRef->movePosition(2 * m);
                         }
                         break;
@@ -247,60 +272,60 @@ void TcpSession::parseDataUnit() {
                     {
                         m_packetRef->movePosition(1);
                         size_t sysn = m_packetRef->get();
+                        if (sysn == 0xff || sysn == 0xfe)
+                            sysn = 0;
+                        else if (sysn < 1 || sysn > 250)
+                            throw std::runtime_error("invalid 可充电储能温度子系统个数: " + std::to_string(sysn));
                         for (size_t i = 0; i < sysn; i++) {
                             m_packetRef->movePosition(1);
                             size_t m = ntohs(m_packetRef->getShort()); // 可充电储能温度探针个数
+                            if (m == 0xffff || m == 0xfffe)
+                                sysn = 0;
+                            else if (m < 1 || m > 65531)
+                                throw std::runtime_error("invalid 可充电储能温度探针个数: " + std::to_string(m));
                             m_packetRef->movePosition(m);
                         }
                         break;
                     }
                     default:
                     {
-                        m_stream.str("");
-                        m_stream << "invalid info type code: " << (int) typ;
-                        throw std::runtime_error(m_stream.str());
+                        throw std::runtime_error("invalid info type code: " + std::to_string((int) typ));
                     }
                 }
             }
         } catch (bytebuf::ByteBufferException& e) {
-
-            m_stream.str("");
-            m_stream << "invalid packet format\n" << e.what();
-            throw std::runtime_error(m_stream.str());
+            throw std::runtime_error(std::string("invalid packet format: ") + e.what());
         }
         if (m_packetRef->remaining() != 1)
             throw std::runtime_error(
                 "invalid packet format: m_packetRef->remaining expect to be 1 after parse data unit");
-
-        if (cmdId == enumCmdCode::realtimeUpload && !Uploader::isConnectWithPublicServer)
-            ((DataPacketHeader_t*) rtData->array())->cmdId = enumCmdCode::reissueUpload;
 
         uint16_t newDataUnitLength = rtData->position() - sizeof (DataPacketHeader_t);
         ((DataPacketHeader_t*) rtData->array())->dataUnitLength =
                 boost::asio::detail::socket_ops::host_to_network_short(newDataUnitLength);
         rtData->put(Util::generateBlockCheckCharacter(rtData->array() + 2, rtData->position() - 2));
         rtData->flip();
-        resource::getResource()->getVehicleDataQueue().put(rtData);
-        std::string type = cmdId == enumCmdCode::reissueUpload ?
-                Constant::cmdReissueUploadStr : Constant::cmdRealtimeUploadStr;
-        GINFO(m_vin) << type << " data put into queue, now queue size: "
-                << resource::getResource()->getVehicleDataQueue().remaining();
-    } else if (cmdId == enumCmdCode::vehicleLogin || cmdId == enumCmdCode::vehicleLogout) {
+        return rtData;
+    }
+
+    if (cmdId == enumCmdCode::vehicleLogin) {
         m_packetRef->position(0);
-        resource::getResource()->getVehicleDataQueue().put(m_packetRef);
-        std::string type = cmdId == enumCmdCode::vehicleLogin ?
-                Constant::cmdVehicleLoginStr : Constant::cmdVehicleLogoutStr;
-        GINFO(m_vin) << type << " data put into queue, now queue size: "
-                << resource::getResource()->getVehicleDataQueue().remaining();
         boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
-        if (cmdId == enumCmdCode::vehicleLogin) {
-            resource::getResource()->getVechicleSessionTable().insert(
-                    std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
-        } else {
-            resource::getResource()->getVechicleSessionTable().erase(m_vin);
-            m_quit = true;
-        }
-    } else if (cmdId == enumCmdCode::heartBeat) {
+        resource::getResource()->getVechicleSessionTable().insert(
+                std::pair<std::string, SessionRef_t>(m_vin, shared_from_this()));
+        return m_packetRef;
+    }
+
+    if (cmdId == enumCmdCode::vehicleLogout) {
+        m_packetRef->position(0);
+        boost::unique_lock<boost::mutex> lk(resource::getResource()->getTableMutex());
+        resource::getResource()->getVechicleSessionTable().erase(m_vin);
+        // 车机登出，结束会话
+        m_quit = true;
+        return m_packetRef;
+    }
+
+    if (cmdId == enumCmdCode::heartBeat) {
         // write ok response to car
         if (m_packetRef->remaining() == 1 && m_dataUnitLen == 0) {
             m_hdr->responseFlag = responseflag::enumResponseFlag::success;
@@ -310,12 +335,10 @@ void TcpSession::parseDataUnit() {
             m_packetRef->flip();
 
             write(*m_packetRef);
-            return;
+            return nullptr;
         }
         throw std::runtime_error("invalid packet format");
-    } else {
-        m_stream.str("");
-        m_stream << "invalid cmd id: " << cmdId;
-        throw std::runtime_error(m_stream.str());
     }
+
+    throw std::runtime_error("invalid cmd id: " + std::to_string(cmdId));
 }

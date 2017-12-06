@@ -106,7 +106,23 @@ namespace blockqueue {
             m_notFull.notify_one();
             return data;
         }
-
+        
+        DataT take(const size_t& seconds) {
+#if UseBoostMutex
+            boost::unique_lock<boost::mutex> lk(m_mutex);
+            if (m_notEmpty.wait_for(lk, boost::chrono::seconds(seconds)) == boost::cv_status::timeout)
+#else
+            std::unique_lock<std::mutex> lk(m_mutex);
+            if (m_notEmpty.wait_for(lk, std::chrono::seconds(seconds)) == std::cv_status::timeout)
+#endif
+                return nullptr;
+            
+            DataT data = m_queue.front();
+            m_queue.pop_front();
+            m_notFull.notify_one();
+            return data;
+        }
+        
         size_t remaining() const {
             return m_queue.size();
         }

@@ -43,7 +43,7 @@ public:
         return m_responseStatus;
     }
 
-    const responsereaderstatus::EnumResponseReaderStatus& waitNextStatus(const size_t& second);
+    const responsereaderstatus::EnumResponseReaderStatus& waitNextStatus(const size_t& seconds);
 
     uint8_t responseFlag() const {
         return m_packetHdr->responseFlag;

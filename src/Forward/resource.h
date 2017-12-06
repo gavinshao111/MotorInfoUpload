@@ -32,8 +32,12 @@ public:
     static resource* getResource();
     virtual ~resource();
 
-    blockqueue::BlockQueue<BytebufSPtr_t>& getVehicleDataQueue() {
-        return *vehicleDataQueueSPtr;
+    blockqueue::BlockQueue<boost_bytebuf_sptr>& get_realtime_queue() {
+        return *realtime_vehicle_data_queue_sptr;
+    }
+
+    blockqueue::BlockQueue<boost_bytebuf_sptr>& get_reissue_queue() {
+        return *reissue_vehicle_data_queue_sptr;
     }
 
     const size_t& getMaxSerialNumber() const {
@@ -163,7 +167,8 @@ private:
     
     uint8_t mode;
 
-    boost::shared_ptr<blockqueue::BlockQueue<BytebufSPtr_t>> vehicleDataQueueSPtr;
+    boost::shared_ptr<blockqueue::BlockQueue<boost_bytebuf_sptr>> realtime_vehicle_data_queue_sptr;
+    boost::shared_ptr<blockqueue::BlockQueue<boost_bytebuf_sptr>> reissue_vehicle_data_queue_sptr;
 //    boost::shared_ptr<gsocket::GSocket> TcpConnWithPublicPlatformSPtr;
     
     SessionTable_t vechicleSessionTable;

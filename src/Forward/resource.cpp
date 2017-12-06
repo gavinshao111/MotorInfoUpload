@@ -46,7 +46,8 @@ resource::resource() {
     enterprisePlatformTcpServicePort = pt.get<int>(section + ".TcpPort", 1);
     heartBeatCycle = pt.get<int>(section + ".HeartBeatCycle", 1);
     int MaxVehicleDataQueueSize = pt.get<int>(section + ".MaxVehicleDataQueueSize", 1);
-    vehicleDataQueueSPtr = boost::make_shared<blockqueue::BlockQueue < BytebufSPtr_t >> (MaxVehicleDataQueueSize);
+    reissue_vehicle_data_queue_sptr = boost::make_shared<blockqueue::BlockQueue < boost_bytebuf_sptr >> (MaxVehicleDataQueueSize);
+    realtime_vehicle_data_queue_sptr = boost::make_shared<blockqueue::BlockQueue < boost_bytebuf_sptr >> (MaxVehicleDataQueueSize);
     string vinAllowed = pt.get<string>(section + ".VinAllowed", "");
     vinAllowedArray = gutility::str_split(vinAllowed, ',');
     section.assign("DataPacket");

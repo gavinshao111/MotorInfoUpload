@@ -41,19 +41,11 @@ int main(int argc, char** argv) {
     try {
 
         resource::getResource();
-
         boost::thread TcpServiceThread(tcpServiceTask);
 
-        size_t UploadChannelNumber = resource::getResource()->getUploadChannelNumber();
-        if (UploadChannelNumber > Constant::maxUploadChannelNum)
-            UploadChannelNumber = Constant::maxUploadChannelNum;
+        boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, 0);
+        uploadThreads.push_back(uploadThread);
 
-        for (size_t i = 0; i < UploadChannelNumber; i++) {
-            boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, i);
-            uploadThreads.push_back(uploadThread);
-        }
-
-#if true
         std::signal(SIGINT, signal_handler);
         std::signal(SIGTERM, signal_handler);
 
@@ -69,9 +61,7 @@ int main(int argc, char** argv) {
         boost::unique_lock<boost::mutex> lk(mtx);
         quit.wait(lk);
 
-        // debug mode
-        //        std::cout << "press any key to quit" << std::endl;
-        //        std::cin.get();
+        GDEBUG(__func__) << "stopping service...";
         resource::getResource()->getIoService().stop();
         TcpServiceThread.join();
         for (std::vector<boost::shared_ptr < boost::thread>>::iterator it = uploadThreads.begin(); it != uploadThreads.end();) {
@@ -80,7 +70,6 @@ int main(int argc, char** argv) {
             tsptr->join();
             it = uploadThreads.erase(it);
         }
-#endif
     } catch (std::exception &e) {
         GWARNING("main") << "exception: " << e.what();
     }
@@ -93,13 +82,20 @@ int main(int argc, char** argv) {
 void signal_handler(int signal) {
     switch (signal) {
         case SIGUSR1:
+            GDEBUG(__func__) << "SIGUSR1";
             offline = true;
             break;
         case SIGUSR2:
         {
-            size_t no = uploadThreads.size();
-            boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, no);
-            uploadThreads.push_back(uploadThread);
+            GDEBUG(__func__) << "SIGUSR2";
+            size_t UploadChannelCount = resource::getResource()->getUploadChannelNumber();
+            if (UploadChannelCount > Constant::maxUploadChannelNum)
+                UploadChannelCount = Constant::maxUploadChannelNum;
+
+            for (size_t i = 1; i < UploadChannelCount; i++) {
+                boost::shared_ptr<boost::thread> uploadThread = boost::make_shared<boost::thread>(uploadTask, i);
+                uploadThreads.push_back(uploadThread);
+            }
             break;
         }
         default:

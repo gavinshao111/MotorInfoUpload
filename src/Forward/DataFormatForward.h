@@ -114,7 +114,7 @@ struct VehicleDataStructInfo {
     const static uint8_t REST_typeCode = 9;
 };
 
-typedef boost::shared_ptr<bytebuf::ByteBuffer> BytebufSPtr_t;
+typedef boost::shared_ptr<bytebuf::ByteBuffer> boost_bytebuf_sptr;
 
 #endif /* DATAFORMATFORWARD_H */
 

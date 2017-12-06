@@ -68,9 +68,8 @@ void gavinlog::init(std::string&& directory) {
             keywords::format =
             (
             expr::stream
-            << "[" << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-            << "] " << expr::smessage
-            << "\n"
+            << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
+            << " " << expr::smessage
             )
             );
     pSinkDeb->locked_backend()->auto_flush(true);
@@ -84,9 +83,8 @@ void gavinlog::init(std::string&& directory) {
             keywords::format =
             (
             expr::stream
-            << "[" << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-            << "] " << expr::smessage
-            << "\n"
+            << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
+            << " " << expr::smessage
             )
             );
     pSinkInfo->locked_backend()->auto_flush(true);
@@ -100,9 +98,8 @@ void gavinlog::init(std::string&& directory) {
             keywords::format =
             (
             expr::stream
-            << "[" << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-            << "] " << expr::smessage
-            << "\n"
+            << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
+            << " " << expr::smessage
             )
             );
     pSinkWarn->locked_backend()->auto_flush(true);

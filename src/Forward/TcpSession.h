@@ -38,11 +38,11 @@ private:
     void readHeaderHandler(const boost::system::error_code& error, size_t bytes_transferred);
     void readDataUnitHandler(const boost::system::error_code& error, size_t bytes_transferred);
     void writeHandler(const boost::system::error_code& error, size_t bytes_transferred);
-    void parseDataUnit();
+    boost_bytebuf_sptr parseDataUnit();
     void readTimeoutHandler(const boost::system::error_code& error);
 
     boost::asio::ip::tcp::socket m_socket;
-    BytebufSPtr_t m_packetRef;
+    boost_bytebuf_sptr m_packetRef;
     bool m_quit;
     std::string m_vin;
     DataPacketHeader_t* m_hdr;

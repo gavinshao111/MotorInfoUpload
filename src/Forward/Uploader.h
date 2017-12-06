@@ -57,14 +57,20 @@ private:
             const time_t& collectTime, const time_t& sendTime, bytebuf::ByteBuffer* data = NULL);
 
     resource* r_resource;
-    blockqueue::BlockQueue<BytebufSPtr_t>& r_carDataQueue;
+    blockqueue::BlockQueue<boost_bytebuf_sptr>& r_reissue_queue;
+    blockqueue::BlockQueue<boost_bytebuf_sptr>& r_realtime_queue;
     //    gsocket::GSocket& s_tcpConn;
     PublicServer m_publicServer;
     LoginDataForward_t m_loginData;
     LogoutDataForward_t m_logoutData;
-    BytebufSPtr_t m_carData;
-    uint16_t m_serialNumber;
-    time_t m_lastloginTime;
+    boost_bytebuf_sptr m_carData;
+    static uint16_t m_serialNumber;
+#if UseBoostMutex
+    static boost::mutex m_serial_number_mtx;
+#else
+    static std::mutex m_serial_number_mtx;
+#endif
+    static time_t m_uploader_last_login_time;
     time_t m_lastSendTime;
     uploaderstatus::EnumUploaderStatus m_uploaderStatus;
 

@@ -167,9 +167,9 @@ void ResponseReader::readResponse(const size_t& timeout) {
     m_responseBuf.rewind();
 }
 
-const responsereaderstatus::EnumResponseReaderStatus& ResponseReader::waitNextStatus(const size_t& second) {
+const responsereaderstatus::EnumResponseReaderStatus& ResponseReader::waitNextStatus(const size_t& seconds) {
     boost::unique_lock<boost::mutex> lk(m_statusMtx);
-    if (m_newStatus.wait_for(lk, boost::chrono::seconds(second)) == boost::cv_status::timeout)
+    if (m_newStatus.wait_for(lk, boost::chrono::seconds(seconds)) == boost::cv_status::timeout)
         m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::timeout;
     return m_responseStatus;
 }
