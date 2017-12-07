@@ -23,6 +23,7 @@
 #include <boost/filesystem.hpp>
 #include "utility.h"
 #include "logger.h"
+#include "Uploader.h"
 
 using namespace std;
 
@@ -62,7 +63,7 @@ resource::resource() {
     reSetupPeroid = pt.get<int>(section + ".ReSetupPeroid", 1);
 
     section.assign("Runing");
-    uploadChannelNumber = pt.get<int>(section + ".UploadChannelNumber", 1);
+    upload_channels_count = pt.get<int>(section + ".UploadChannelNumber", 1);
     mode = pt.get<int>(section + ".Mode", 1);
     system = (enumSystem) pt.get<int>(section + ".System", 1);
     
@@ -98,4 +99,12 @@ resource* resource::getResource() {
 }
 
 resource::~resource() {
+}
+
+bool resource::is_connected_with_public_server() {
+    for (auto uploader : uploader_pool) {
+        if (uploader->m_publicServer.is_connected())
+            return true;
+    }
+    return false;
 }

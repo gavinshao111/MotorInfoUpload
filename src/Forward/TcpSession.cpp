@@ -147,7 +147,7 @@ void TcpSession::readDataUnitHandler(const boost::system::error_code& error, siz
             auto& realtime_queue = resource::getResource()->get_realtime_queue();
             auto& reissue_queue = resource::getResource()->get_reissue_queue();
             // 离线期间受到的数据全部发放入补发队列，Uploader与上级平台重连后先发补发队列的数据
-            if (!Uploader::isConnectWithPublicServer) {
+            if (!resource::getResource()->is_connected_with_public_server()) {
                 for (; !realtime_queue.isEmpty(); reissue_queue.put(realtime_queue.take()));
                 reissue_queue.put(packet);
                 GINFO(m_vin) << "reissue queue size: "

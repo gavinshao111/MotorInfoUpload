@@ -36,6 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/Forward/Constant.o \
+	${OBJECTDIR}/src/Forward/DataFormatForward.o \
 	${OBJECTDIR}/src/Forward/MotorInfoForward.o \
 	${OBJECTDIR}/src/Forward/PublicServer.o \
 	${OBJECTDIR}/src/Forward/ResponseReader.o \
@@ -75,6 +76,11 @@ ${OBJECTDIR}/src/Forward/Constant.o: src/Forward/Constant.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/Constant.o src/Forward/Constant.cpp
+
+${OBJECTDIR}/src/Forward/DataFormatForward.o: src/Forward/DataFormatForward.cpp
+	${MKDIR} -p ${OBJECTDIR}/src/Forward
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Forward/DataFormatForward.o src/Forward/DataFormatForward.cpp
 
 ${OBJECTDIR}/src/Forward/MotorInfoForward.o: src/Forward/MotorInfoForward.cpp
 	${MKDIR} -p ${OBJECTDIR}/src/Forward

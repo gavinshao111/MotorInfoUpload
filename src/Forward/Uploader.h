@@ -14,12 +14,12 @@
 #ifndef UPLOADER_H
 #define UPLOADER_H
 
-#include "resource.h"
 #include "DataFormatForward.h"
 #include "../BlockQueue.h"
 #include "PublicServer.h"
 #include "ByteBuffer.h"
 #include "ResponseReader.h"
+#include "thread.h"
 
 namespace uploaderstatus {
 
@@ -35,13 +35,14 @@ typedef enum {
     platformCompliance = 2,
 } EnumRunMode;
 
-class Uploader {
+class resource;
+
+class Uploader : public gavin::thread {
 public:
     Uploader(const size_t& no);
     virtual ~Uploader();
-    void task();
 
-    static bool isConnectWithPublicServer;
+    friend class resource;
 private:
     Uploader(const Uploader& orig);
     void tcpSend();
@@ -55,6 +56,7 @@ private:
     void logout(bool needResponse = true);
     void static outputMsg(const enumSystem& system, const std::string& vin,
             const time_t& collectTime, const time_t& sendTime, bytebuf::ByteBuffer* data = NULL);
+    void run() override;
 
     resource* r_resource;
     blockqueue::BlockQueue<boost_bytebuf_sptr>& r_reissue_queue;

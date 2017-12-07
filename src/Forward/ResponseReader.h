@@ -20,6 +20,8 @@
 #include "DataFormatForward.h"
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
+#include <boost/thread.hpp>
+#include "thread.h"
 
 namespace responsereaderstatus {
 
@@ -32,13 +34,11 @@ namespace responsereaderstatus {
         responseFormatErr = 5,
     } EnumResponseReaderStatus;
 }
-class ResponseReader {
+class ResponseReader : public gavin::thread {
 public:
     ResponseReader(const size_t& no, PublicServer& publicServer);
-//    ResponseReader(const ResponseReader& orig);
     virtual ~ResponseReader();
     
-    void task();
     const responsereaderstatus::EnumResponseReaderStatus& status() const {
         return m_responseStatus;
     }
@@ -54,6 +54,7 @@ public:
     }
     
 private:
+    ResponseReader(const ResponseReader& orig);
     PublicServer& r_publicServer;
     bytebuf::ByteBuffer m_responseBuf;
     std::stringstream m_stream;
@@ -66,8 +67,8 @@ private:
     boost::mutex m_statusMtx;
     boost::condition_variable m_newStatus;
     
+    void run() override;
     void readResponse(const size_t& timeout);
-    
     void status(const responsereaderstatus::EnumResponseReaderStatus& status);
 
 };

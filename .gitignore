@@ -8,3 +8,5 @@
 /log/
 /backup/
 /motor_info_upload
+/.svn/
+*.log

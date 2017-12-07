@@ -30,11 +30,11 @@ public:
     void write(bytebuf::ByteBuffer& src, const size_t& size);
 
     void write(bytebuf::ByteBuffer& src);
-    bool isConnected() const;
+    bool is_connected() const;
     
 private:
     PublicServer(const PublicServer& orig);
-    boost::shared_ptr<gsocket::socket> m_socketSPtr;
+    boost::shared_ptr<gsocket::socket> m_socket_sptr;
     std::string m_ip;
     int m_port;
 };

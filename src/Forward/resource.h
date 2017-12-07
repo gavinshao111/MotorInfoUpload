@@ -21,10 +21,11 @@
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 #include "../BlockQueue.h"
-//#include "GSocket.h"
 #include "DataFormatForward.h"
 #include "TcpSession.h"
 #include "PublicServer.h"
+
+class Uploader;
 
 class resource {
 public:
@@ -106,8 +107,8 @@ public:
         return ioService;
     }
 
-    const size_t& getUploadChannelNumber() const {
-        return uploadChannelNumber;
+    const size_t& get_upload_channels_count() const {
+        return upload_channels_count;
     }
 
     const uint8_t& getMode() const {
@@ -121,6 +122,12 @@ public:
     const std::vector<std::string>& getVinAllowedArray() const {
         return vinAllowedArray;
     }
+    
+    std::vector<boost::shared_ptr<Uploader>>& get_uploader_pool() {
+        return uploader_pool;
+    }
+    
+    bool is_connected_with_public_server();
 
 private:
     resource();
@@ -163,7 +170,7 @@ private:
     //    gavinsocket::GSocketClient* tcpConnection;
     size_t maxSerialNumber;    
     size_t heartBeatCycle;  // 车机与我平台的默认心跳周期
-    size_t uploadChannelNumber;
+    size_t upload_channels_count;
     
     uint8_t mode;
 
@@ -179,6 +186,7 @@ private:
     // 符合性检测下允许上传车机vin列表，以逗号隔开    
     // 构造函数中为vinAllowedArray重新赋值（移动）前会先析构其默认构造的资源，由于其默认构造资源开销小，所以可以这样写。
     std::vector<std::string> vinAllowedArray;
+    std::vector<boost::shared_ptr<Uploader>> uploader_pool;
 };
 
 #endif /* RESOURCE_H */

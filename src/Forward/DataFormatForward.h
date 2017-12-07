@@ -73,12 +73,7 @@ typedef struct DataPacketHeader {
     uint8_t encryptionAlgorithm;
     uint16_t dataUnitLength;
 
-    DataPacketHeader() {
-        startCode[0] = '#';
-        startCode[1] = '#';
-        responseFlag = 0xfe;
-    }
-
+    DataPacketHeader();
 } DataPacketHeader_t;
 
 typedef struct LoginDataForward {
@@ -90,6 +85,8 @@ typedef struct LoginDataForward {
     uint8_t password[20];
     uint8_t encryptionAlgorithm; // header 也有这个字段，重复
     uint8_t checkCode;
+    
+    LoginDataForward();
 } LoginDataForward_t;
 
 typedef struct LogoutDataForward {

@@ -22,9 +22,7 @@
 #include "../Util.h"
 #include "logger.h"
 
-using namespace bytebuf;
 using namespace std;
-using namespace gsocket;
 
 ResponseReader::ResponseReader(const size_t& no, PublicServer& publicServer) :
 m_responseBuf(512),
@@ -34,17 +32,14 @@ m_responseStatus(responsereaderstatus::EnumResponseReaderStatus::init) {
     m_id = "ResponseReader." + to_string(no);
 }
 
-//ResponseReader::ResponseReader(const ResponseReader& orig) {
-//}
-
 ResponseReader::~ResponseReader() {
 }
 
-void ResponseReader::task() {
+void ResponseReader::run() {
     try {
         int timeout = 0; //block to read
         for (;;) {
-            if (!r_publicServer.isConnected()) {
+            if (!r_publicServer.is_connected()) {
                 boost::unique_lock<boost::mutex> lk(m_statusMtx);
                 m_responseStatus = responsereaderstatus::EnumResponseReaderStatus::init;
                 try {
@@ -138,10 +133,10 @@ void ResponseReader::readResponse(const size_t& timeout) {
             return;
         }
         r_publicServer.read(m_responseBuf, responseDataUnitLen + 1, timeout);
-    } catch (SocketTimeoutException& e) {
+    } catch (gsocket::SocketTimeoutException& e) {
         status(responsereaderstatus::EnumResponseReaderStatus::timeout);
         return;
-    } catch (SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
+    } catch (gsocket::SocketException& e) { // 只捕获连接被关闭的异常，其他异常正常抛出
         GWARNING(m_id) << "read response exception: " << e.what();
         status(responsereaderstatus::EnumResponseReaderStatus::connectionClosed);
         return;

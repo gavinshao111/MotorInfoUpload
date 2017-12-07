@@ -5,6 +5,7 @@
       <itemPath>src/BlockQueue.h</itemPath>
       <itemPath>src/Forward/Constant.cpp</itemPath>
       <itemPath>src/Forward/Constant.h</itemPath>
+      <itemPath>src/Forward/DataFormatForward.cpp</itemPath>
       <itemPath>src/Forward/DataFormatForward.h</itemPath>
       <itemPath>src/Forward/MotorInfoForward.cpp</itemPath>
       <itemPath>src/Forward/PublicServer.cpp</itemPath>
@@ -58,6 +59,7 @@
             <pElem>../GavinLib/bytebuffer/src</pElem>
             <pElem>../GavinLib/gsocket/src</pElem>
             <pElem>../GavinLib/utility/src</pElem>
+            <pElem>../GavinLib/gthread/src</pElem>
           </incDir>
           <commandLine>-DUseBoostMutex=1 -DBOOST_LOG_DYN_LINK</commandLine>
         </ccTool>
@@ -67,7 +69,7 @@
             <pElem>../GavinLib/libs</pElem>
           </linkerAddLib>
           <commandlineTool>g++</commandlineTool>
-          <commandLine>-lgutil -lbytebuffer -lgsocket -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup</commandLine>
+          <commandLine>-lgutil -lbytebuffer -lgsocket -lgthread -lboost_thread -lboost_system -lboost_filesystem -lboost_log -lboost_log_setup</commandLine>
         </linkerTool>
       </compileType>
       <item path="configurtion.ini" ex="false" tool="3" flavor2="0">
@@ -79,6 +81,8 @@
       <item path="src/Forward/Constant.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Constant.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/DataFormatForward.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
@@ -148,6 +152,8 @@
       <item path="src/Forward/Constant.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/Constant.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Forward/DataFormatForward.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Forward/DataFormatForward.h" ex="false" tool="3" flavor2="0">
       </item>
